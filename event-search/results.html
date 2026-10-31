@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Event Matches</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <a class="brand" href="index.html"><span class="logo"></span>Fuzzy Event Finder</a>
+      <a class="btn light" id="edit" href="index.html">Refine search</a>
+    </div>
+    <div class="asked">
+      <div class="q" id="q"></div>
+      <div class="u-row" id="uRow"></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap page">
+  <div class="insights" id="insights"></div>
+
+  <section>
+    <div class="sec-head">
+      <div>
+        <h2>Best matches</h2>
+        <p>Each event fits each of your answers to a degree. Skipped answers don't count, and the ranking also learns from your "more like this" and "not for me".</p>
+      </div>
+      <div class="stat">
+        <div><b id="crispCount">0</b><small>a strict yes/no filter finds</small></div>
+        <div class="fz"><b id="fuzzyCount">0</b><small>good fuzzy matches</small></div>
+      </div>
+    </div>
+    <div class="results" id="results"></div>
+    <div class="more"><button class="btn outline" id="showAll"></button></div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div>
+        <h2>How we understood you</h2>
+        <p>Every phrase became a fuzzy set: the curve shows how well a value fits what you said, from 0 to 1. Dots are events.</p>
+      </div>
+    </div>
+    <div class="explain" id="explain"></div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="fuzzy.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const pct = v => Math.round(v * 100);
+const a = readAnswers();
+const profile = loadProfile();
+let m = buildModel(a, profile);
+
+// ---------- header ----------
+$('edit').href = 'index.html' + toQuery(a);
+const u = understood(a);
+$('q').innerHTML = a.text.trim() ? `&ldquo;${esc(a.text.trim())}&rdquo;` : u.length ? 'Your search' : "Events we think you'll love";
+$('q').classList.toggle('plain', !a.text.trim());
+$('uRow').innerHTML = u.map(x => `<span><small>${x.dim === 'keyword' ? 'what' : x.dim === 'going' ? 'plans' : DIMS[x.dim]?.label ?? ''}</small>${esc(x.label)}</span>`).join('');
+
+// ---------- insights ----------
+function renderInsights() {
+  const el = $('insights');
+  el.innerHTML = '';
+  for (const ins of m.insights) {
+    const d = document.createElement('div');
+    d.className = 'insight';
+    d.innerHTML = `<span>${esc(ins.text)}</span>`;
+    if (ins.action) {
+      const b = document.createElement('a');
+      b.className = 'btn small';
+      b.textContent = ins.action.label;
+      const next = JSON.parse(JSON.stringify(a));
+      next.when = [...next.when, { key: ins.action.when }];
+      b.href = 'results.html' + toQuery(next);
+      d.appendChild(b);
+    }
+    el.appendChild(d);
+  }
+}
+
+// ---------- results ----------
+const TOP = 6;
+let showAll = false;
+function resultCard(r, i) {
+  const e = r.e;
+  const weakest = r.vals.length ? r.vals.indexOf(Math.min(...r.vals)) : -1;
+  const why = weakest >= 0 && r.vals[weakest] < .9 ? `<div class="why">Heads-up: ${m.criteria[weakest].why(e)}</div>` : '';
+  const badge = i === 0 ? '<span class="badge">BEST MATCH</span>' : r.worthWait ? '<span class="badge wait">WORTH THE WAIT</span>' : '';
+  return `
+    <div class="res${i === 0 ? ' best' : ''}${r.match < .2 ? ' low' : ''}" data-id="${e.id}">
+      ${badge}
+      <div class="ring" style="--s:${pct(r.match)};--c:${scoreColor(r.match)}"><span>${pct(r.match)}</span></div>
+      <div>
+        <div class="name">${e.name}</div>
+        <div class="meta">${e.place} · ${relDay(e.day)} (${fmtShort(e.day)}), ${fmtHour(e.hour)} · ${e.price ? 'CHF ' + e.price : 'Free'} · ${m.distOf(e).toFixed(0)} km</div>
+        ${m.criteria.length ? `<div class="bars">${m.criteria.map((c, j) => `
+          <div class="bar" title="${c.label}: ${r.vals[j].toFixed(2)}">
+            <div class="trk"><i style="width:${r.vals[j] * 100}%;background:${scoreColor(r.vals[j])}"></i></div>${c.label}
+          </div>`).join('')}</div>` : ''}
+        ${why}
+        <div class="fb">
+          <button class="up${r.liked ? ' on' : ''}" data-fb="1">More like this</button>
+          <button class="down${r.hidden ? ' on' : ''}" data-fb="-1">Not for me</button>
+        </div>
+      </div>
+    </div>`;
+}
+function renderResults() {
+  $('crispCount').textContent = m.criteria.length ? m.results.filter(r => r.crisp).length : m.results.length;
+  $('fuzzyCount').textContent = m.results.filter(r => r.match >= .5).length;
+  const list = showAll ? m.results : m.results.slice(0, TOP);
+  $('results').innerHTML = list.map(resultCard).join('');
+  $('showAll').textContent = showAll ? 'Show fewer' : `Show all ${m.results.length} events`;
+}
+$('showAll').onclick = () => { showAll = !showAll; renderResults(); };
+$('results').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-fb]');
+  if (!b) return;
+  const e = EVENTS.find(x => x.id === +b.closest('.res').dataset.id);
+  const sign = +b.dataset.fb;
+  const undo = (sign > 0 ? profile.liked : profile.hidden).includes(e.id);
+  if (undo) {
+    for (const [t, d] of Object.entries(e.tags)) profile.aff[t] = Math.max(-1, Math.min(1, (profile.aff[t] || 0) - .35 * sign * d));
+    profile.liked = profile.liked.filter(id => id !== e.id);
+    profile.hidden = profile.hidden.filter(id => id !== e.id);
+    saveProfile(profile);
+  } else giveFeedback(profile, e, sign);
+  const tags = Object.entries(e.tags).sort((x, y) => y[1] - x[1]).slice(0, 2).map(([t]) => t).join(' and ');
+  toast(undo ? 'Undone.' : sign > 0 ? `Got it: more ${tags} from now on.` : `Noted: less ${tags}.`);
+  m = buildModel(a, profile);
+  renderResults();
+  renderLearned();
+});
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---------- explanation cards ----------
+const explain = $('explain');
+function card(title, { said, span2, caption } = {}) {
+  const c = document.createElement('div');
+  c.className = 'card' + (span2 ? ' span2' : '');
+  c.innerHTML = `<h3>${title}</h3>${said ? `<div class="said">You said ${said}</div>` : ''}<div class="body"></div>${caption ? `<div class="caption">${caption}</div>` : ''}`;
+  explain.appendChild(c);
+  return c.querySelector('.body');
+}
+const svg = parent => { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.classList.add('mf'); parent.appendChild(s); return s; };
+const saidList = dim => a[dim].map(t => `<b>${esc(termLabel(dim, t, a))}</b>`).join(' or ');
+const critMu = key => m.criteria.find(c => c.key === key).mu;
+const points = (valueOf, mu, fmt) => m.results.map(({ e }) => ({ x: valueOf(e), y: mu(e), title: `${e.name}: ${fmt(e)} → ${mu(e).toFixed(2)}` }));
+const termCurves = (dim) => a[dim].length > 1 || a[dim].some(t => t.hedge || t.neg)
+  ? a[dim].map(t => ({ f: termFn(dim, { key: t.key }, a), faint: true })) : [];
+
+if (!m.criteria.length) {
+  card('You skipped everything, and that is fine', { span2: true,
+    caption: 'With no preferences, we rank by how exceptional each event is, what you have liked before, and how soon it is. Tell us anything, even roughly, and the ranking adapts.' });
+}
+
+if (m.active.when) {
+  let last = 0;
+  for (let x = 0; x <= 70; x++) if (m.f.when(x) > .01) last = x;
+  const xmax = Math.min(70, Math.max(14, last + 4)), step = Math.ceil(xmax / 8);
+  const body = card('When', { said: saidList('when'),
+    caption: [
+      'Human time words have soft edges: Friday is "kind of" the weekend, and the day after "tomorrow" still counts a little.',
+      a.when.some(t => t.key === 'nextWeekend') && DOW >= 1 && DOW <= 3 ? 'Early in the week, "next weekend" is ambiguous, so the coming weekend counts a little too.' : '',
+      m.results.some(r => r.worthWait) ? 'Dots above the curve were lifted by the worth-the-wait rule.' : '',
+    ].filter(Boolean).join(' ') });
+  plot(svg(body), {
+    xmin: 0, xmax, height: 124,
+    curves: [...termCurves('when'), { f: m.f.when }],
+    ticks: Array.from({ length: Math.floor(xmax / step) + 1 }, (_, i) => i * step).map(x => [x, dateOf(x).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })]),
+    markers: ANCHORS.map(an => ({ x: an.day, label: an.name.split(' ')[0] })),
+    points: points(e => e.day, critMu('when'), e => relDay(e.day)).filter(p => p.x <= xmax),
+  });
+}
+
+if (m.active.time) {
+  const body = card('Time of day', { said: saidList('time'), caption: 'The parts of the day overlap. Picking several combines them with OR (the maximum).' });
+  plot(svg(body), {
+    xmin: 5, xmax: 24, height: 124,
+    curves: [
+      ...Object.entries(TERMS.time).map(([k, t]) => ({ f: t.f, faint: true, label: t.label, at: t.at, on: a.time.some(x => x.key === k) })),
+      { f: m.f.time },
+    ],
+    ticks: [6, 9, 12, 15, 18, 21, 24].map(h => [h, h + ':00']),
+    points: points(e => e.hour, critMu('time'), e => fmtHour(e.hour)),
+  });
+}
+
+if (m.active.what) {
+  const body = card('What', { said: [...a.what.map(t => `<b>${TERMS.what[t.key].label}</b>`), ...a.keywords.map(k => `<b>${esc(k)}</b>`)].join(' or '),
+    caption: 'Your words are matched against event tags. Related words count partially, and typos still match.' });
+  const exp = VOCAB.map(t => [t, Math.max(0, ...m.keywords.map(k => sim(k, t)))]).filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]);
+  body.innerHTML = `<div class="expand">${exp.map(([t, v]) => `<span style="opacity:${.35 + .65 * v}">${t}<i>${v.toFixed(1)}</i></span>`).join('')}</div>`;
+}
+
+if (m.active.energy) {
+  const body = card('Vibe', { said: saidList('energy'),
+    caption: `The vibe words overlap on an energy scale from 0 to 10. Their centre of gravity (centroid) is ${m.energyCenter.toFixed(1)}.` });
+  plot(svg(body), {
+    xmin: 0, xmax: 10, height: 124,
+    curves: [
+      ...Object.entries(TERMS.energy).map(([k, t]) => ({ f: t.f, faint: true, label: t.label, at: t.at, on: a.energy.some(x => x.key === k) })),
+      { f: m.f.energy },
+    ],
+    ticks: [0, 2, 4, 6, 8, 10].map(v => [v, v]),
+    points: points(e => e.energy, critMu('energy'), e => `energy ${e.energy}/10`),
+  });
+}
+
+if (m.active.dist) {
+  const t = a.dist[0], ideal = t.key === 'custom' ? a.custom.dist : TERMS.dist[t.key].ideal, max = t.key === 'custom' ? a.custom.dist * 1.5 : TERMS.dist[t.key].max;
+  const c = document.createElement('div');
+  c.className = 'card span2';
+  c.innerHTML = `<h3>Distance</h3><div class="dist-grid"><div id="map"></div><div><div class="said">You said <b>${esc(termLabel('dist', t, a))}</b> from <b>${m.center.label}</b></div><div class="body"></div>
+    <div class="caption">Fully true up to ${ideal} km, then it fades to 0 at ${Math.round(max)} km. No hard cut-off.</div></div></div>`;
+  explain.appendChild(c);
+  const xmax = Math.max(20, Math.ceil(max * 1.5 / 10) * 10);
+  plot(svg(c.querySelector('.body')), {
+    xmin: 0, xmax, curves: [{ f: m.f.dist }],
+    ticks: [0, .25, .5, .75, 1].map(f => [f * xmax, Math.round(f * xmax) + ' km']),
+    points: points(m.distOf, critMu('dist'), e => `${m.distOf(e).toFixed(1)} km`),
+  });
+  const map = L.map('map', { scrollWheelZoom: false });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO', subdomains: 'abcd', maxZoom: 19,
+  }).addTo(map);
+  const ctr = [m.center.lat, m.center.lng];
+  for (let i = 6; i >= 1; i--)
+    L.circle(ctr, { radius: (ideal + (max - ideal) * i / 6) * 1000, stroke: false, fillColor: '#5b4bdb', fillOpacity: .035, interactive: false }).addTo(map);
+  L.circle(ctr, { radius: max * 1000, color: '#5b4bdb', weight: 1.2, dashArray: '5 6', fill: false, interactive: false }).addTo(map);
+  L.circle(ctr, { radius: ideal * 1000, color: '#5b4bdb', weight: 2, fillColor: '#5b4bdb', fillOpacity: .12, interactive: false }).addTo(map);
+  L.marker(ctr, { icon: L.divIcon({ className: '', html: '<div class="you-pin"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }) })
+    .addTo(map).bindTooltip('You', { direction: 'top', offset: [0, -10] });
+  for (const r of m.results)
+    L.circleMarker([r.e.lat, r.e.lng], { radius: 7, color: '#fff', weight: 2, fillColor: scoreColor(r.match), fillOpacity: .95 })
+      .bindTooltip(`<b>${r.e.name}</b><br>${pct(r.match)}% match`).addTo(map);
+  map.fitBounds(L.latLng(ctr).toBounds(Math.min(max, 120) * 2000));
+}
+
+if (m.active.budget) {
+  const t = a.budget[0], max = t.key === 'custom' ? a.custom.budget * 1.3 + 5 : TERMS.budget[t.key].max;
+  const xmax = Math.max(100, Math.ceil((max + 20) / 10) * 10);
+  const body = card('Budget', { said: `<b>${esc(termLabel('budget', t, a))}</b>`, caption: 'A little over budget still counts partly. It is a gradual "too expensive", not a wall.' });
+  plot(svg(body), {
+    xmin: 0, xmax, curves: [{ f: m.f.budget }],
+    ticks: [0, .25, .5, .75, 1].map(f => [f * xmax, 'CHF ' + Math.round(f * xmax)]),
+    points: points(e => e.price, critMu('budget'), e => `CHF ${e.price}`),
+  });
+}
+
+if (m.active.who) {
+  const body = card('Who', { said: saidList('who'),
+    caption: [
+      `We read this as a group of about ${m.size}. Each event has a fuzzy "good group size" range.`,
+      m.kids ? 'Kid-friendliness counts, and late starts count against it (rule below).' : '',
+      m.dog ? 'Dog-friendliness counts.' : '',
+    ].filter(Boolean).join(' ') });
+  const GROUP = [['Solo', [0, 1, 1, 2], 1], ['Couple', [1, 2, 2, 3], 2], ['Small group', [2, 3, 5, 7], 4], ['Big group', [5, 8, 20, 20], 9.5]];
+  plot(svg(body), {
+    xmin: 0, xmax: 12, height: 116,
+    curves: GROUP.map(([label, mf, at]) => ({ f: x => trap(x, ...mf), faint: !trap(m.size, ...mf), label, at, on: trap(m.size, ...mf) > 0 })),
+    ticks: [1, 2, 4, 6, 8, 10, 12].map(v => [v, v]),
+    marker: m.size,
+  });
+}
+
+if (m.active.plans) {
+  const days = m.going.map(g => g.day);
+  const xmin = Math.max(0, Math.min(...days) - 6), xmax = Math.max(...days) + 6;
+  const body = card('Your other plans', { said: m.going.map(g => `<b>${g.name}</b>`).join(' and '),
+    caption: 'For a fully loud event, this is how well it fits around your plans. Quiet events are not affected.' });
+  plot(svg(body), {
+    xmin, xmax, height: 124,
+    curves: [{ f: x => 1 - .85 * Math.max(0, ...m.going.map(g => Math.min(trap(Math.abs(x - g.day), -1, 0, 1, 2.5), g.loud))) }],
+    ticks: Array.from({ length: xmax - xmin + 1 }, (_, i) => xmin + i).filter((_, i) => i % 2 === 0).map(x => [x, dateOf(x).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })]),
+    markers: m.going.map(g => ({ x: g.day, label: g.name.split(' ')[0] })),
+    points: points(e => e.day, critMu('plans'), e => `${relDay(e.day)}, loudness ${m.loudness(e).toFixed(1)}`).filter(p => p.x >= xmin && p.x <= xmax),
+  });
+}
+
+// Rules
+{
+  const body = card('Rules that connect your answers', { span2: true,
+    caption: 'Each rule fires to a degree between 0 and 1 (the minimum of its IF parts), so your answers influence each other instead of being separate filters.' });
+  body.innerHTML = Object.values(m.rules).map(rule => {
+    const fired = m.results.map(r => [r.e, rule.fire(r.e)]).filter(([, v]) => v > .1).sort((x, y) => y[1] - x[1]).slice(0, 3);
+    return `<div class="rule${rule.active ? '' : ' off'}"><b>${rule.name}</b><code>${esc(rule.text)}</code>
+      <div class="fired">${!rule.active ? rule.off : fired.length ? 'Fired for ' + fired.map(([e, v]) => `${e.name} (${v.toFixed(2)})`).join(', ') : 'Did not fire for any event.'}</div></div>`;
+  }).join('');
+}
+
+// What we've learned
+let learnedBody;
+function renderLearned() {
+  if (!learnedBody) learnedBody = card('What we have learned about you', { span2: true,
+    caption: 'Every "more like this" and "not for me" nudges these tag preferences. The system adapts to you instead of you learning the system.' });
+  const aff = Object.entries(profile.aff).filter(([, v]) => Math.abs(v) >= .05).sort((x, y) => y[1] - x[1]);
+  learnedBody.innerHTML = aff.length
+    ? `<div class="aff">${aff.map(([t, v]) => `<span>${t}</span><div class="track"><i style="${v > 0 ? `left:50%;width:${v * 50}%;background:#3aa776` : `right:50%;width:${-v * 50}%;background:#d0564f`}"></i></div>`).join('')}</div>
+       <div style="margin-top:12px"><button class="btn outline small" id="resetTaste">Reset what we learned</button></div>`
+    : '<div class="said">Nothing yet. Use "More like this" or "Not for me" on any result and watch the ranking change.</div>';
+  const reset = $('resetTaste');
+  if (reset) reset.onclick = () => {
+    profile.aff = {}; profile.liked = []; profile.hidden = []; saveProfile(profile);
+    m = buildModel(a, profile); renderResults(); renderLearned(); toast('Starting fresh.');
+  };
+}
+
+renderInsights();
+renderResults();
+renderLearned();
+</script>
+</body>
+</html>

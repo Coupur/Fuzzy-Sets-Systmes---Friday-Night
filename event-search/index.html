@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fuzzy Event Finder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="wrap topbar">
+    <a class="brand" href="index.html"><span class="logo"></span>Fuzzy Event Finder</a>
+  </div>
+</header>
+
+<main class="wrap home">
+  <section class="hero">
+    <h1>What do you feel like doing?</h1>
+    <p class="sub">Say it the way you'd tell a friend. Every part is optional, and "roughly" is fine.</p>
+    <div class="ask">
+      <input id="ask" placeholder="e.g. something chill this weekend, not too far, kind of cheap" autocomplete="off">
+      <button class="mic" id="mic" title="Say it instead" hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+    </div>
+    <div class="examples" id="examples">Try:</div>
+    <div class="understood" id="understood"></div>
+    <div class="fixes" id="fixes"></div>
+    <div class="learned" id="learned" hidden></div>
+  </section>
+
+  <section class="block" id="anchorBlock">
+    <div class="block-head"><h2>Coming up</h2><span>Plan around the big moments, or tell us you're already going.</span></div>
+    <div class="anchors" id="anchors"></div>
+  </section>
+
+  <section class="block">
+    <div class="block-head"><h2>Fine-tune</h2><span>Tap anything. Skip the rest.</span></div>
+    <div class="rows" id="rows"></div>
+  </section>
+</main>
+
+<div class="dock">
+  <div class="wrap">
+    <div class="live" id="live"></div>
+    <button class="btn ghost" id="surprise">Surprise me</button>
+    <button class="btn primary" id="go">Show events</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="fuzzy.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const profile = loadProfile();
+
+// Tapped choices and typed text live side by side. Text wins for the dimensions it mentions,
+// unless the user has since tapped or removed something in that dimension.
+let tap = readAnswers();
+let text = tap.text;
+let parsed = parseQuery(text);
+const suppressed = new Set();
+function effective() {
+  const p = {
+    ...parsed,
+    items: parsed.items.filter(t => !suppressed.has(t.dim)),
+    keywords: suppressed.has('what') ? [] : parsed.keywords.filter(k => !suppressed.has('kw:' + k)),
+    city: suppressed.has('city') ? null : parsed.city,
+    best: suppressed.has('best') ? false : parsed.best,
+  };
+  return mergeParsed(tap, p, text);
+}
+function edit(dims, fn) {
+  const a = effective();
+  for (const d of [].concat(dims)) suppressed.add(d);
+  fn(a);
+  tap = a;
+  render();
+}
+function toggle(dim, key) {
+  edit(dim, a => {
+    const on = a[dim].some(t => t.key === key);
+    if (DIMS[dim].multi) a[dim] = on ? a[dim].filter(t => t.key !== key) : [...a[dim], { key }];
+    else a[dim] = on ? [] : [{ key }];
+  });
+}
+
+// ---------- ask box ----------
+const ask = $('ask');
+ask.value = text;
+ask.addEventListener('input', () => {
+  text = ask.value;
+  parsed = parseQuery(text);
+  suppressed.clear();
+  render();
+});
+ask.addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+for (const ex of ['something chill this wknd, not too far', 'best music next weekend', 'tmrw evening with my dog, under 30 chf', 'halloween with the kids']) {
+  const b = document.createElement('button');
+  b.textContent = ex;
+  b.onclick = () => { ask.value = ex; ask.dispatchEvent(new Event('input')); };
+  $('examples').appendChild(b);
+}
+
+// Voice input where the browser supports it
+const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (Speech) {
+  const mic = $('mic');
+  mic.hidden = false;
+  let rec;
+  mic.onclick = () => {
+    if (rec) { rec.stop(); return; }
+    rec = new Speech();
+    rec.lang = 'en-GB';
+    rec.interimResults = true;
+    rec.onresult = e => { ask.value = [...e.results].map(r => r[0].transcript).join(' '); ask.dispatchEvent(new Event('input')); };
+    rec.onerror = e => { $('fixes').textContent = `Voice input unavailable here (${e.error}). Typing works just as well.`; };
+    rec.onend = () => { rec = null; mic.classList.remove('listening'); };
+    mic.classList.add('listening');
+    rec.start();
+  };
+}
+
+// ---------- rendering ----------
+function renderUnderstood(a) {
+  const el = $('understood');
+  const items = understood(a);
+  el.innerHTML = items.length ? '<span class="lead">We understood</span>' : '<span class="lead">Nothing picked yet: we\'ll show what we think is great right now.</span>';
+  for (const u of items) {
+    const c = document.createElement('span');
+    c.className = 'u-chip';
+    c.innerHTML = `<small>${u.dim === 'keyword' ? 'what' : u.dim === 'going' ? 'plans' : DIMS[u.dim]?.label ?? u.dim}</small>${esc(u.label)}<button title="Remove">×</button>`;
+    c.querySelector('button').onclick = () => {
+      if (u.dim === 'keyword') edit('kw:' + u.key, a => a.keywords = a.keywords.filter(k => k !== u.key));
+      else if (u.dim === 'city') edit('city', a => a.city = 'fribourg');
+      else if (u.dim === 'going') edit('going', a => a.going = a.going.filter(g => g !== u.key));
+      else if (u.dim === 'best') edit('best', a => a.best = false);
+      else edit(u.dim, a => a[u.dim] = a[u.dim].filter(t => t.key !== u.key));
+    };
+    el.appendChild(c);
+  }
+  const fx = parsed.fixes.filter(([got]) => text.toLowerCase().includes(got.split(' ')[0]));
+  $('fixes').innerHTML = [
+    fx.length ? 'Read ' + fx.map(([got, as]) => `<i>"${esc(got)}"</i> as <i>"${esc(as)}"</i>`).join(', ') : '',
+    parsed.ignored.length ? `Skipped: ${parsed.ignored.map(esc).join(', ')}` : '',
+  ].filter(Boolean).join(' · ');
+}
+
+function renderAnchors(a) {
+  $('anchorBlock').hidden = !ANCHORS.length;
+  const el = $('anchors');
+  el.innerHTML = '';
+  for (const an of ANCHORS) {
+    const around = a.when.some(t => t.key === 'around:' + an.key), going = a.going.includes(an.key);
+    const card = document.createElement('div');
+    card.className = 'anchor' + (around || going ? ' on' : '');
+    card.innerHTML = `<span class="when">${relDay(an.day)} · ${fmtDay(an.day)}</span><b>${an.name}</b><p>${an.blurb}</p>
+      <div class="acts"><button class="chip${around ? ' on' : ''}">Plan around it</button><button class="chip${going ? ' on' : ''}">${an.going}</button></div>`;
+    const [b1, b2] = card.querySelectorAll('button');
+    b1.onclick = () => toggle('when', 'around:' + an.key);
+    b2.onclick = () => edit('going', x => x.going = going ? x.going.filter(g => g !== an.key) : [...x.going, an.key]);
+    el.appendChild(card);
+  }
+}
+
+let fp, calendarOpen = false;
+function renderRows(a) {
+  const el = $('rows');
+  el.innerHTML = '';
+  for (const [dim, meta] of Object.entries(DIMS)) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    const keys = Object.keys(TERMS[dim]).filter(k => !k.startsWith('around:'));
+    const extraKeys = a[dim].map(t => t.key).filter(k => !keys.includes(k));
+    for (const key of [...keys, ...extraKeys]) {
+      const t = a[dim].find(t => t.key === key);
+      const b = document.createElement('button');
+      b.className = 'chip' + (t ? ' on' : '');
+      b.textContent = t ? termLabel(dim, t, a) : TERMS[dim][key].label;
+      b.onclick = () => toggle(dim, key);
+      chips.appendChild(b);
+    }
+    if (dim === 'what') for (const k of a.keywords) {
+      const b = document.createElement('button');
+      b.className = 'chip on';
+      b.textContent = k;
+      b.onclick = () => edit('kw:' + k, x => x.keywords = x.keywords.filter(y => y !== k));
+      chips.appendChild(b);
+    }
+    if (dim === 'when') {
+      const b = document.createElement('button');
+      b.className = 'chip dashed';
+      b.textContent = calendarOpen ? 'Hide calendar' : 'Pick dates…';
+      b.onclick = () => { calendarOpen = !calendarOpen; render(); };
+      chips.appendChild(b);
+    }
+    const any = a[dim].length || (dim === 'what' && a.keywords.length);
+    row.innerHTML = `<div class="name">${meta.label}</div>`;
+    const body = document.createElement('div');
+    body.appendChild(chips);
+    if (dim === 'when') body.appendChild(calendarHolder);
+    if (dim === 'dist') {
+      const from = document.createElement('div');
+      from.className = 'chips extra';
+      from.innerHTML = '<span class="any" style="padding:6px 4px 0 0">from</span>';
+      for (const [k, c] of Object.entries(CITIES)) {
+        const b = document.createElement('button');
+        b.className = 'chip' + (a.city === k ? ' on' : '');
+        b.textContent = c.label;
+        b.onclick = () => edit('city', x => x.city = k);
+        from.appendChild(b);
+      }
+      body.appendChild(from);
+    }
+    row.appendChild(body);
+    const right = document.createElement(any ? 'button' : 'span');
+    right.className = any ? 'clear' : 'any';
+    right.textContent = any ? 'clear' : 'any';
+    if (any) right.onclick = () => edit(dim, x => { x[dim] = []; if (dim === 'what') x.keywords = []; if (dim === 'when') x.range = null; });
+    row.appendChild(right);
+    el.appendChild(row);
+  }
+  calendarHolder.hidden = !calendarOpen;
+  if (calendarOpen && !fp) initCalendar(a);
+}
+// Created once and re-attached on every render so the flatpickr instance survives
+const calendarHolder = document.createElement('div');
+calendarHolder.className = 'fp-holder';
+calendarHolder.innerHTML = '<div></div>';
+function initCalendar(a) {
+  fp = flatpickr(calendarHolder.firstChild, {
+    inline: true, mode: 'range', minDate: 'today',
+    showMonths: window.innerWidth > 720 ? 2 : 1,
+    defaultDate: a.range ? a.range.map(parseISO) : [],
+    locale: { firstDayOfWeek: 1 },
+    onDayCreate: (_, __, ___, day) => {
+      const an = ANCHORS.find(x => x.day === offOf(day.dateObj));
+      if (an) { day.classList.add('anchor-day'); day.title = an.name; }
+    },
+    onChange: d => {
+      if (d.length !== 2) return;
+      edit('when', x => {
+        x.range = [iso(d[0]), iso(d[1])];
+        if (!x.when.some(t => t.key === 'range')) x.when.push({ key: 'range' });
+      });
+    },
+  });
+}
+
+function renderLearned() {
+  const aff = Object.entries(profile.aff).filter(([, v]) => Math.abs(v) >= .2).sort((x, y) => y[1] - x[1]);
+  const el = $('learned');
+  el.hidden = !aff.length;
+  if (!aff.length) return;
+  const pos = aff.filter(([, v]) => v > 0).slice(0, 4), neg = aff.filter(([, v]) => v < 0).slice(-3);
+  el.innerHTML = 'Learning your taste:' +
+    pos.map(([t]) => `<span class="tagp">${t}</span>`).join('') +
+    (neg.length ? ' less ' + neg.map(([t]) => `<span class="tagn">${t}</span>`).join('') : '') +
+    ' <button class="linkbtn" id="resetTaste">reset</button>';
+  $('resetTaste').onclick = () => { profile.aff = {}; profile.liked = []; profile.hidden = []; saveProfile(profile); render(); };
+}
+
+function renderDock(a) {
+  const m = buildModel(a, profile);
+  const good = m.results.filter(r => r.match >= .5);
+  $('live').innerHTML = !m.criteria.length
+    ? 'No preferences yet: we\'ll pick the <b>highlights</b>.'
+    : good.length
+      ? `<b>${good.length} event${good.length > 1 ? 's' : ''}</b> fit well. Top pick: <b>${esc(good[0].e.name)}</b>`
+      : `Nothing fits perfectly, but we'll show the <b>closest matches</b>.`;
+}
+
+function render() {
+  const a = effective();
+  renderUnderstood(a);
+  renderAnchors(a);
+  renderRows(a);
+  renderLearned();
+  renderDock(a);
+}
+
+$('go').onclick = () => { location.href = 'results.html' + toQuery(effective()); };
+$('surprise').onclick = () => {
+  const a = emptyAnswers();
+  a.going = effective().going;
+  location.href = 'results.html' + toQuery(a);
+};
+render();
+</script>
+</body>
+</html>
