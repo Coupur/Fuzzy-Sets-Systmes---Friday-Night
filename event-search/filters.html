@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Filters</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a1a;
+    --muted: #666666;
+    --track: #e4e4e4;
+    --field: #f2f2f2;
+    --accent: #2f6fdf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616;
+      --text: #f0f0f0;
+      --muted: #a0a0a0;
+      --track: #3a3a3a;
+      --field: #262626;
+      --accent: #5b8ef0;
+    }
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+    padding: 48px 16px;
+  }
+
+  main { width: 100%; max-width: 420px; }
+
+  section { margin-bottom: 40px; }
+
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+  }
+  h2 { font-size: 18px; font-weight: 600; margin: 0; }
+  .value { color: var(--muted); }
+
+  /* Sliders */
+  .slider { position: relative; height: 24px; }
+  .track, .fill {
+    position: absolute;
+    top: 50%;
+    height: 4px;
+    transform: translateY(-50%);
+    border-radius: 2px;
+  }
+  .track { left: 0; right: 0; background: var(--track); }
+  .fill  { background: var(--accent); }
+
+  .slider input {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 24px;
+    margin: 0;
+    background: none;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .slider.dual input { pointer-events: none; }
+  .slider input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    pointer-events: auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+  }
+  .slider input::-moz-range-thumb {
+    pointer-events: auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+  }
+  .slider input::-moz-range-track { background: none; }
+  .slider input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--text); outline-offset: 2px; }
+  .slider input:focus-visible::-moz-range-thumb { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  .ends {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  /* Distance stop labels above the slider */
+  .stops {
+    position: relative;
+    height: 22px;
+    margin-bottom: 8px;
+  }
+  .stops button {
+    position: absolute;
+    transform: translateX(-50%);
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .stops button:first-child { transform: none; }
+  .stops button:last-child  { transform: translateX(-100%); }
+  .stops button.active { color: var(--accent); font-weight: 600; }
+
+  /* Time and date */
+  .times { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 20px; }
+  .times label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .times input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+
+  .dates { display: flex; gap: 12px; }
+  .dates label { flex: 1; display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 14px; }
+
+  input[type="date"], select {
+    font: inherit;
+    font-size: 16px;
+    color: var(--text);
+    background: var(--field);
+    border: none;
+    border-radius: 6px;
+    padding: 10px 12px;
+    width: 100%;
+    box-sizing: border-box;
+    color-scheme: light dark;
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <section>
+    <div class="head">
+      <h2>Energy</h2>
+      <span class="value" id="energyValue">5</span>
+    </div>
+    <div class="slider">
+      <div class="track"></div>
+      <div class="fill" id="energyFill" style="left:0"></div>
+      <input type="range" id="energy" min="0" max="10" step="1" value="5" aria-label="Energy">
+    </div>
+    <div class="ends"><span>Chill</span><span>Wild</span></div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>When</h2>
+    </div>
+    <div class="times">
+      <label><input type="checkbox" name="time" value="early" checked> Early evening</label>
+      <label><input type="checkbox" name="time" value="mid" checked> Mid evening</label>
+      <label><input type="checkbox" name="time" value="late" checked> Late night</label>
+    </div>
+    <div class="dates">
+      <label>From <input type="date" id="dateFrom"></label>
+      <label>To <input type="date" id="dateTo"></label>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Price</h2>
+      <span class="value" id="priceValue"></span>
+    </div>
+    <div class="slider dual">
+      <div class="track"></div>
+      <div class="fill" id="priceFill"></div>
+      <input type="range" id="priceMin" min="0" max="200" step="5" value="0" aria-label="Minimum price">
+      <input type="range" id="priceMax" min="0" max="200" step="5" value="200" aria-label="Maximum price">
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Group size</h2>
+    </div>
+    <select id="group" aria-label="Group size">
+      <option value="any">Any</option>
+      <option value="1">1+</option>
+      <option value="2">2+</option>
+      <option value="3">3+</option>
+    </select>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Distance</h2>
+      <span class="value" id="distValue"></span>
+    </div>
+    <div class="stops" id="distStops">
+      <button type="button" data-i="0">Walk</button>
+      <button type="button" data-i="1">Bike</button>
+      <button type="button" data-i="2">Commute</button>
+      <button type="button" data-i="3">Travel</button>
+    </div>
+    <div class="slider">
+      <div class="track"></div>
+      <div class="fill" id="distFill" style="left:0"></div>
+      <input type="range" id="dist" min="0" max="3" step="1" value="1" aria-label="Distance">
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const pct = input => (input.value - input.min) / (input.max - input.min) * 100;
+
+  // Energy
+  function updateEnergy() {
+    $("energyFill").style.right = (100 - pct($("energy"))) + "%";
+    $("energyValue").textContent = $("energy").value;
+  }
+  $("energy").addEventListener("input", updateEnergy);
+  updateEnergy();
+
+  // Dates: default to today through one week from today
+  const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  const today = new Date();
+  const nextWeek = new Date(today.getTime() + 7 * 864e5);
+  $("dateFrom").value = $("dateFrom").min = $("dateTo").min = iso(today);
+  $("dateTo").value = iso(nextWeek);
+  $("dateFrom").addEventListener("change", () => {
+    $("dateTo").min = $("dateFrom").value;
+    if ($("dateTo").value < $("dateFrom").value) $("dateTo").value = $("dateFrom").value;
+  });
+
+  // Price (min/max)
+  function updatePrice(e) {
+    const minEl = $("priceMin"), maxEl = $("priceMax");
+    let lo = Number(minEl.value), hi = Number(maxEl.value);
+    if (lo > hi) {
+      if (e && e.target === minEl) minEl.value = lo = hi;
+      else maxEl.value = hi = lo;
+    }
+    $("priceFill").style.left = pct(minEl) + "%";
+    $("priceFill").style.right = (100 - pct(maxEl)) + "%";
+    minEl.style.zIndex = lo >= Number(minEl.max) - Number(minEl.step) ? 2 : 1;
+    const top = Number(maxEl.max);
+    $("priceValue").textContent = "CHF " + lo + " to " + hi + (hi === top ? "+" : "");
+  }
+  $("priceMin").addEventListener("input", updatePrice);
+  $("priceMax").addEventListener("input", updatePrice);
+  updatePrice();
+
+  // Distance: four stops, labels sit over each stop
+  const DIST = [
+    { key: "walk",    label: "Walk",    km: 5 },
+    { key: "bike",    label: "Bike",    km: 20 },
+    { key: "commute", label: "Commute", km: 45 },
+    { key: "travel",  label: "Travel",  km: 100 },
+  ];
+  const stopButtons = [...$("distStops").children];
+  stopButtons.forEach((b, i) => {
+    // match the thumb centre: 10px is half the thumb width
+    b.style.left = `calc(10px + (100% - 20px) * ${i / 3})`;
+    if (i === 0) b.style.left = "0";
+    if (i === 3) b.style.left = "100%";
+    b.addEventListener("click", () => { $("dist").value = i; updateDist(); });
+  });
+  function updateDist() {
+    const i = Number($("dist").value);
+    $("distFill").style.right = (100 - pct($("dist"))) + "%";
+    stopButtons.forEach((b, j) => b.classList.toggle("active", j === i));
+    $("distValue").textContent = "Up to " + DIST[i].km + " km";
+  }
+  $("dist").addEventListener("input", updateDist);
+  updateDist();
+
+  // Current filter values, for wiring into the search
+  function getFilters() {
+    return {
+      energy: Number($("energy").value),
+      times: [...document.querySelectorAll('input[name="time"]:checked')].map(c => c.value),
+      dateFrom: $("dateFrom").value,
+      dateTo: $("dateTo").value,
+      priceMin: Number($("priceMin").value),
+      priceMax: Number($("priceMax").value),
+      group: $("group").value,
+      distance: DIST[Number($("dist").value)].key,
+    };
+  }
+  window.getFilters = getFilters;
+</script>
+</body>
+</html>
