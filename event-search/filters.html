@@ -50,7 +50,7 @@
   h2 { font-size: 18px; font-weight: 600; margin: 0; }
   .value { color: var(--muted); }
 
-  /* Sliders */
+  /* sliders */
   .slider { position: relative; height: 24px; }
   .track, .fill {
     position: absolute;
@@ -104,7 +104,7 @@
     margin-top: 8px;
   }
 
-  /* Starting from */
+  /* starting from */
   .from { display: flex; gap: 8px; }
   .from select { flex: 1; }
   .link {
@@ -119,16 +119,53 @@
   }
   .note { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
 
-  /* Results */
-  .results { list-style: none; padding: 0; margin: 16px 0 0; }
-  .results li { padding: 14px 0; border-bottom: 1px solid var(--track); }
-  .results .top { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
-  .results .score { color: var(--accent); }
-  .results .trip { margin-top: 4px; }
-  .results .other { color: var(--muted); font-size: 14px; margin-top: 2px; }
-  .results .other span { white-space: nowrap; margin-right: 14px; }
+  /* results */
+  .sort { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .sort button {
+    font: inherit; font-size: 14px;
+    padding: 6px 12px;
+    border: 1px solid var(--track); border-radius: 999px;
+    background: none; color: var(--text);
+    cursor: pointer;
+  }
+  .sort button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-  /* Search */
+  .results { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  .card {
+    display: flex; gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--track); border-radius: 12px;
+  }
+  .date-tile {
+    flex: none; width: 52px; align-self: flex-start;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 10px;
+    font-size: 12px; text-transform: uppercase; font-weight: 600;
+  }
+  .date-tile strong { font-size: 22px; line-height: 1.1; color: var(--text); }
+  .card-body { flex: 1; min-width: 0; }
+  .card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .price { font-size: 22px; font-weight: 700; }
+  .match {
+    flex: none;
+    font-size: 13px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .price-note { color: var(--muted); font-size: 13px; }
+  .name { font-size: 17px; font-weight: 600; margin: 8px 0 2px; }
+  .meta { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .meta b { color: var(--text); font-weight: 600; }
+  .weak-points { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+  .ruled-out { margin-top: 24px; color: var(--muted); }
+  .ruled-out summary { cursor: pointer; font-size: 14px; }
+  .ruled-out .card { opacity: 0.6; }
+  .ruled-out .results { margin-top: 12px; }
+
+  /* buttons */
   .search {
     width: 100%;
     padding: 12px;
@@ -151,22 +188,56 @@
     overflow-x: auto;
   }
 
-  /* Time and date */
-  .times { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 20px; }
-  .times label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-  .times input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
-  input[type="number"] {
+  /* steps */
+  .steps { display: flex; gap: 6px; margin-bottom: 32px; }
+  .steps button {
+    flex: 1;
+    background: none;
+    border: none;
+    border-top: 4px solid var(--track);
+    padding: 8px 0 0;
     font: inherit;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: left;
+    cursor: pointer;
+  }
+  .steps button.done { border-top-color: var(--accent); }
+  .steps button[aria-current="step"] { border-top-color: var(--accent); color: var(--text); font-weight: 600; }
+
+  .buttons { display: flex; gap: 12px; }
+  .buttons .search { flex: 1; width: auto; }
+  .back {
+    flex: 1;
+    padding: 12px;
+    font: inherit;
+    font-weight: 600;
     color: var(--text);
     background: var(--field);
     border: none;
-    border-radius: 6px;
-    padding: 6px 8px;
-    width: 64px;
-    color-scheme: light dark;
+    border-radius: 8px;
+    cursor: pointer;
   }
 
-  /* "How much it matters" slider under a section */
+  /* checkboxes */
+  .times { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 20px; }
+  .times label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .times input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+
+  /* kids rating */
+  .ratings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+  .ratings label {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 10px 4px;
+    border: 1px solid var(--track); border-radius: 8px;
+    cursor: pointer;
+  }
+  .ratings input { position: absolute; opacity: 0; pointer-events: none; }
+  .ratings span { color: var(--muted); font-size: 13px; }
+  .ratings label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .ratings label:has(input:focus-visible) { outline: 2px solid var(--text); outline-offset: 2px; }
+
+  /* importance sliders */
   .importance { margin-top: 20px; }
   .imp-head {
     display: flex;
@@ -176,10 +247,46 @@
     margin-bottom: 4px;
   }
 
-  .dates { display: flex; gap: 12px; }
-  .dates label { flex: 1; display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 14px; }
+  /* calendar */
+  .cal-head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; margin-bottom: 8px; }
+  .cal-nav {
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: none;
+    color: var(--text);
+    font-size: 24px; line-height: 1;
+    cursor: pointer;
+  }
+  .cal-nav:hover { background: var(--field); }
+  .cal-nav:disabled { opacity: 0.3; background: none; cursor: default; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; text-align: center; }
+  .cal-day-name { color: var(--muted); font-size: 13px; padding: 4px 0; }
+  .cal-day {
+    position: relative; z-index: 0;
+    height: 40px; padding: 0;
+    border: none; background: none;
+    font: inherit; color: var(--text);
+    cursor: pointer;
+  }
+  .cal-day::before {
+    content: "";
+    position: absolute; left: 50%; top: 50%; z-index: -1;
+    width: 36px; height: 36px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+  }
+  .cal-day:hover::before { box-shadow: inset 0 0 0 1px var(--accent); }
+  .cal-day:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+  .cal-day:disabled { color: var(--muted); opacity: 0.5; cursor: default; }
+  .cal-day:disabled::before { box-shadow: none; }
+  .cal-day.today { font-weight: 700; }
+  .cal-day.between { background: var(--accent-soft); }
+  .cal-day.start  { background: linear-gradient(to right, transparent 50%, var(--accent-soft) 50%); }
+  .cal-day.finish { background: linear-gradient(to left,  transparent 50%, var(--accent-soft) 50%); }
+  .cal-day.picked { color: #fff; font-weight: 600; }
+  .cal-day.picked::before { background: var(--accent); }
 
-  input[type="date"], select {
+  select {
     font: inherit;
     font-size: 16px;
     color: var(--text);
@@ -196,174 +303,228 @@
 <body>
 <main>
 
-  <!-- Each "How much it matters" slider is the importance (0-10) for that section's fuzzy function -->
+  <div id="filtersPage">
+    <nav class="steps" id="stepNav" aria-label="Steps">
+      <button type="button">When</button>
+      <button type="button">Price</button>
+      <button type="button">Travel</button>
+      <button type="button">Keywords</button>
+      <button type="button">Group</button>
+    </nav>
 
-  <section>
-    <div class="head">
-      <h2>Energy</h2>
-      <span class="value" id="energyValue"></span>
+    <div class="step">
+    <section>
+      <div class="head">
+        <h2>When</h2>
+      </div>
+      <div class="times">
+        <label><input type="checkbox" name="time" value="early evening" checked> Early evening</label>
+        <label><input type="checkbox" name="time" value="evening" checked> Evening</label>
+        <label><input type="checkbox" name="time" value="night" checked> Night</label>
+      </div>
+      <div class="calendar">
+        <div class="cal-head">
+          <button type="button" class="cal-nav" id="calPrev" aria-label="Previous month">&lsaquo;</button>
+          <span id="calMonth"></span>
+          <button type="button" class="cal-nav" id="calNext" aria-label="Next month">&rsaquo;</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <p class="note" id="calNote"></p>
+        <input type="hidden" id="dateFrom">
+        <input type="hidden" id="dateTo">
+      </div>
+    </section>
     </div>
-    <!-- 1-5, same scale as the events' energy. Words are Marlene's: drained, tired, okay, good, buzzing -->
-    <div class="slider">
-      <div class="track"></div>
-      <div class="fill" style="left:0"></div>
-      <input type="range" id="energy" min="1" max="5" step="1" value="3" aria-label="Energy">
+
+    <div class="step" hidden>
+    <section>
+      <div class="head">
+        <h2>Price</h2>
+        <span class="value" id="priceValue"></span>
+      </div>
+      <div class="slider dual">
+        <div class="track"></div>
+        <div class="fill" id="priceFill"></div>
+        <input type="range" id="priceMin" min="0" max="200" step="5" value="0" aria-label="Minimum price">
+        <input type="range" id="priceMax" min="0" max="200" step="5" value="200" aria-label="Maximum price">
+      </div>
+      <div class="importance">
+        <div class="imp-head"><span>How much it matters</span><span id="priceImpValue"></span></div>
+        <div class="slider">
+          <div class="track"></div>
+          <div class="fill" style="left:0"></div>
+          <input type="range" id="priceImp" min="0" max="10" step="1" value="5" aria-label="How much price matters">
+        </div>
+      </div>
+    </section>
     </div>
-    <div class="ends"><span>Drained</span><span>Buzzing</span></div>
-    <div class="importance">
-      <div class="imp-head"><span>How much it matters</span><span id="energyImpValue"></span></div>
+
+    <div class="step" hidden>
+    <section>
+      <div class="head">
+        <h2>Starting from</h2>
+      </div>
+      <div class="from">
+        <!-- lat,lon -->
+        <select id="from" aria-label="Starting from">
+          <option value="46.9490,7.4391">Bern HB</option>
+          <option value="46.9580,7.4290">Bern Länggasse</option>
+          <option value="46.9600,7.4550">Bern Breitenrain</option>
+          <option value="46.9240,7.4140">Köniz</option>
+          <option value="46.7580,7.6280">Thun</option>
+          <option value="46.8030,7.1510">Fribourg</option>
+          <option value="47.1370,7.2470">Biel</option>
+        </select>
+        <button type="button" class="link" id="useMyLocation">Use my location</button>
+      </div>
+      <p class="note" id="fromNote" hidden></p>
+    </section>
+
+    <section>
+      <div class="head">
+        <h2>Getting there</h2>
+      </div>
+      <div class="times">
+        <label><input type="checkbox" name="mode" value="walk" checked> Walk</label>
+        <label><input type="checkbox" name="mode" value="bike"> Bike</label>
+        <label><input type="checkbox" name="mode" value="public" checked> Public transport</label>
+        <label><input type="checkbox" name="mode" value="car"> Car</label>
+        <label><input type="checkbox" name="mode" value="taxi"> Taxi</label>
+      </div>
+    </section>
+    </div>
+
+    <div class="step" hidden>
+    <section>
+      <div class="head">
+        <h2>Energy</h2>
+        <span class="value" id="energyValue"></span>
+      </div>
       <div class="slider">
         <div class="track"></div>
         <div class="fill" style="left:0"></div>
-        <input type="range" id="energyImp" min="0" max="10" step="1" value="5" aria-label="How much energy matters">
+        <input type="range" id="energy" min="1" max="5" step="1" value="3" aria-label="Energy">
       </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="head">
-      <h2>When</h2>
-    </div>
-    <div class="times">
-      <label><input type="checkbox" name="time" value="early evening" checked> Early evening</label>
-      <label><input type="checkbox" name="time" value="evening" checked> Evening</label>
-      <label><input type="checkbox" name="time" value="night" checked> Night</label>
-    </div>
-    <div class="dates">
-      <label>From <input type="date" id="dateFrom"></label>
-      <label>To <input type="date" id="dateTo"></label>
-    </div>
-  </section>
-
-  <section>
-    <div class="head">
-      <h2>Price</h2>
-      <span class="value" id="priceValue"></span>
-    </div>
-    <div class="slider dual">
-      <div class="track"></div>
-      <div class="fill" id="priceFill"></div>
-      <input type="range" id="priceMin" min="0" max="200" step="5" value="0" aria-label="Minimum price">
-      <input type="range" id="priceMax" min="0" max="200" step="5" value="200" aria-label="Maximum price">
-    </div>
-    <div class="importance">
-      <div class="imp-head"><span>How much it matters</span><span id="priceImpValue"></span></div>
-      <div class="slider">
-        <div class="track"></div>
-        <div class="fill" style="left:0"></div>
-        <input type="range" id="priceImp" min="0" max="10" step="1" value="5" aria-label="How much price matters">
+      <div class="ends"><span>Drained</span><span>Buzzing</span></div>
+      <p class="note">Low: something calm, close by. High: a big night you'd travel for.</p>
+      <div class="importance">
+        <div class="imp-head"><span>How much it matters</span><span id="energyImpValue"></span></div>
+        <div class="slider">
+          <div class="track"></div>
+          <div class="fill" style="left:0"></div>
+          <input type="range" id="energyImp" min="0" max="10" step="1" value="5" aria-label="How much energy matters">
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section>
-    <div class="head">
-      <h2>Group size</h2>
-    </div>
-    <select id="group" aria-label="Group size">
-      <option value="1">Just me</option>
-      <option value="2" selected>2</option>
-      <option value="3">3</option>
-      <option value="4">4</option>
-      <option value="5">5</option>
-      <option value="6">6</option>
-      <option value="8">7–9</option>
-      <option value="10">10+</option>
-    </select>
-    <div class="importance">
-      <div class="imp-head"><span>How much it matters</span><span id="groupImpValue"></span></div>
-      <div class="slider">
-        <div class="track"></div>
-        <div class="fill" style="left:0"></div>
-        <input type="range" id="groupImp" min="0" max="10" step="1" value="5" aria-label="How much group size matters">
+    <section>
+      <div class="head">
+        <h2>Keywords</h2>
       </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="head">
-      <h2>Kids</h2>
-    </div>
-    <div class="times">
-      <label><input type="checkbox" id="kids"> Bringing a child</label>
-      <label id="kidAgeLabel" hidden>Age <input type="number" id="kidAge" min="0" max="17" value="8"></label>
-    </div>
-    <div class="importance" id="kidsImportance" hidden>
-      <div class="imp-head"><span>How much it matters</span><span id="kidsImpValue"></span></div>
-      <div class="slider">
-        <div class="track"></div>
-        <div class="fill" style="left:0"></div>
-        <input type="range" id="kidsImp" min="0" max="10" step="1" value="5" aria-label="How much the age rating matters">
+      <!-- same list as KEYWORDS in event_data.py -->
+      <div class="times">
+        <label><input type="checkbox" name="keyword" value="party"> Party</label>
+        <label><input type="checkbox" name="keyword" value="dance"> Dance</label>
+        <label><input type="checkbox" name="keyword" value="social"> Social</label>
+        <label><input type="checkbox" name="keyword" value="quiet"> Quiet</label>
+        <label><input type="checkbox" name="keyword" value="creative"> Creative</label>
+        <label><input type="checkbox" name="keyword" value="outdoor"> Outdoor</label>
+        <label><input type="checkbox" name="keyword" value="food"> Food</label>
+        <label><input type="checkbox" name="keyword" value="sport"> Sport</label>
+        <label><input type="checkbox" name="keyword" value="pop"> Pop</label>
+        <label><input type="checkbox" name="keyword" value="techno"> Techno</label>
+        <label><input type="checkbox" name="keyword" value="edm"> EDM</label>
+        <label><input type="checkbox" name="keyword" value="made for kids"> Made for kids</label>
+        <label><input type="checkbox" name="keyword" value="made for pets"> Made for pets</label>
       </div>
-    </div>
-  </section>
-
-  <section>
-    <div class="head">
-      <h2>Keywords</h2>
-    </div>
-    <!-- Same list as KEYWORDS in Fuzzy/event_data.py -->
-    <div class="times">
-      <label><input type="checkbox" name="keyword" value="party"> Party</label>
-      <label><input type="checkbox" name="keyword" value="dance"> Dance</label>
-      <label><input type="checkbox" name="keyword" value="social"> Social</label>
-      <label><input type="checkbox" name="keyword" value="quiet"> Quiet</label>
-      <label><input type="checkbox" name="keyword" value="creative"> Creative</label>
-      <label><input type="checkbox" name="keyword" value="outdoor"> Outdoor</label>
-      <label><input type="checkbox" name="keyword" value="food"> Food</label>
-      <label><input type="checkbox" name="keyword" value="sport"> Sport</label>
-      <label><input type="checkbox" name="keyword" value="pop"> Pop</label>
-      <label><input type="checkbox" name="keyword" value="techno"> Techno</label>
-      <label><input type="checkbox" name="keyword" value="edm"> EDM</label>
-      <label><input type="checkbox" name="keyword" value="made for kids"> Made for kids</label>
-      <label><input type="checkbox" name="keyword" value="made for pets"> Made for pets</label>
-    </div>
-    <div class="importance">
-      <div class="imp-head"><span>How much it matters</span><span id="keywordImpValue"></span></div>
-      <div class="slider">
-        <div class="track"></div>
-        <div class="fill" style="left:0"></div>
-        <input type="range" id="keywordImp" min="0" max="10" step="1" value="5" aria-label="How much keywords matter">
+      <div class="importance">
+        <div class="imp-head"><span>How much it matters</span><span id="keywordImpValue"></span></div>
+        <div class="slider">
+          <div class="track"></div>
+          <div class="fill" style="left:0"></div>
+          <input type="range" id="keywordImp" min="0" max="10" step="1" value="5" aria-label="How much keywords matter">
+        </div>
       </div>
+    </section>
     </div>
-  </section>
 
-  <section>
-    <div class="head">
-      <h2>Starting from</h2>
-    </div>
-    <div class="from">
-      <!-- value = "latitude,longitude" -->
-      <select id="from" aria-label="Starting from">
-        <option value="46.9490,7.4391">Bern HB</option>
-        <option value="46.9580,7.4290">Bern Länggasse</option>
-        <option value="46.9600,7.4550">Bern Breitenrain</option>
-        <option value="46.9240,7.4140">Köniz</option>
-        <option value="46.7580,7.6280">Thun</option>
-        <option value="46.8030,7.1510">Fribourg</option>
-        <option value="47.1370,7.2470">Biel</option>
+    <div class="step" hidden>
+    <section>
+      <div class="head">
+        <h2>Group size</h2>
+      </div>
+      <select id="group" aria-label="Group size">
+        <option value="1">Just me</option>
+        <option value="2" selected>2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="8">7–9</option>
+        <option value="10">10+</option>
       </select>
-      <button type="button" class="link" id="useMyLocation">Use my location</button>
-    </div>
-    <p class="note" id="fromNote" hidden></p>
-  </section>
+      <div class="importance">
+        <div class="imp-head"><span>How much it matters</span><span id="groupImpValue"></span></div>
+        <div class="slider">
+          <div class="track"></div>
+          <div class="fill" style="left:0"></div>
+          <input type="range" id="groupImp" min="0" max="10" step="1" value="5" aria-label="How much group size matters">
+        </div>
+      </div>
+    </section>
 
-  <section>
+    <section>
+      <div class="head">
+        <h2>Kids</h2>
+      </div>
+      <div class="times">
+        <label><input type="checkbox" id="kids"> Bringing kids</label>
+      </div>
+      <div id="kidsRating" hidden>
+        <p class="note">Highest rating that's OK for them</p>
+        <div class="ratings">
+          <label><input type="radio" name="rating" value="G"><b>G</b><span>All ages</span></label>
+          <label><input type="radio" name="rating" value="PG" checked><b>PG</b><span>6+</span></label>
+          <label><input type="radio" name="rating" value="PG-13"><b>PG-13</b><span>12+</span></label>
+          <label><input type="radio" name="rating" value="R"><b>R</b><span>16+</span></label>
+        </div>
+      </div>
+      <div class="importance" id="kidsImportance" hidden>
+        <div class="imp-head"><span>How much it matters</span><span id="kidsImpValue"></span></div>
+        <div class="slider">
+          <div class="track"></div>
+          <div class="fill" style="left:0"></div>
+          <input type="range" id="kidsImp" min="0" max="10" step="1" value="5" aria-label="How much the rating matters">
+        </div>
+      </div>
+    </section>
+    </div>
+
+    <div class="buttons">
+      <button type="button" class="back" id="back">Back</button>
+      <button type="button" class="search" id="next">Next</button>
+    </div>
+  </div>
+
+  <div id="resultsPage" hidden>
     <div class="head">
-      <h2>Getting there</h2>
+      <h2>Your Friday night</h2>
+      <button type="button" class="link" id="edit">Change answers</button>
     </div>
-    <div class="times">
-      <label><input type="checkbox" name="mode" value="walk" checked> Walk</label>
-      <label><input type="checkbox" name="mode" value="bike"> Bike</label>
-      <label><input type="checkbox" name="mode" value="public" checked> Public transport</label>
-      <label><input type="checkbox" name="mode" value="car"> Car</label>
-      <label><input type="checkbox" name="mode" value="taxi"> Taxi</label>
+    <p class="note" id="summary"></p>
+    <div class="sort" id="sortBar" hidden>
+      <button type="button" data-sort="best" aria-pressed="true">Best match</button>
+      <button type="button" data-sort="cheapest" aria-pressed="false">Cheapest</button>
+      <button type="button" data-sort="closest" aria-pressed="false">Closest</button>
+      <button type="button" data-sort="soonest" aria-pressed="false">Soonest</button>
     </div>
-  </section>
-
-  <button type="button" class="search" id="search">Search</button>
-  <ol class="results" id="results"></ol>
-  <pre id="output" hidden></pre>
+    <ol class="results" id="results"></ol>
+    <details class="ruled-out" id="ruledOut" hidden>
+      <summary id="ruledOutTitle"></summary>
+      <ol class="results" id="ruledOutList"></ol>
+    </details>
+    <pre id="output" hidden></pre>
+  </div>
 
 </main>
 
@@ -371,7 +532,6 @@
   const $ = id => document.getElementById(id);
   const pct = input => (input.value - input.min) / (input.max - input.min) * 100;
 
-  // Single sliders: move the blue fill and show the value
   function setupSlider(input, showValue) {
     const fill = input.parentElement.querySelector(".fill");
     function update() {
@@ -382,7 +542,7 @@
     update();
   }
 
-  // Energy 1-5, shown as Marlene's words
+  // energy 1-5 shown as Marlene's words
   const ENERGY_WORDS = ["drained", "tired", "okay", "good", "buzzing"];
   const energyWord = () => ENERGY_WORDS[Number($("energy").value) - 1];
   setupSlider($("energy"), () => {
@@ -390,29 +550,88 @@
     $("energyValue").textContent = w[0].toUpperCase() + w.slice(1);
   });
 
-  // "How much it matters" sliders, 0-10
   for (const id of ["energyImp", "priceImp", "groupImp", "kidsImp", "keywordImp"]) {
     setupSlider($(id), v => { $(id + "Value").textContent = v + "/10"; });
   }
 
-  // Kids: only show the age and the slider when a child is coming
   $("kids").addEventListener("change", () => {
-    $("kidAgeLabel").hidden = !$("kids").checked;
+    $("kidsRating").hidden = !$("kids").checked;
     $("kidsImportance").hidden = !$("kids").checked;
   });
 
-  // Dates: default to today through one week from today
+  // calendar: click a day, then a later day to make it a range
   const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
   const today = new Date();
   const nextWeek = new Date(today.getTime() + 7 * 864e5);
-  $("dateFrom").value = $("dateFrom").min = $("dateTo").min = iso(today);
-  $("dateTo").value = iso(nextWeek);
-  $("dateFrom").addEventListener("change", () => {
-    $("dateTo").min = $("dateFrom").value;
-    if ($("dateTo").value < $("dateFrom").value) $("dateTo").value = $("dateFrom").value;
-  });
+  const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const calendar = { from: iso(today), to: iso(nextWeek), month: thisMonth };
 
-  // Price (min/max)
+  const longDate = date => new Date(date + "T12:00")
+    .toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
+  function pickDay(date) {
+    if (calendar.to || date < calendar.from) {
+      calendar.from = date;
+      calendar.to = null;
+    } else if (date > calendar.from) {
+      calendar.to = date;
+    }
+    drawCalendar();
+  }
+
+  function drawCalendar() {
+    const { from, to, month } = calendar;
+    $("calMonth").textContent = month.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+    $("calPrev").disabled = month <= thisMonth;
+
+    const grid = $("calGrid");
+    grid.innerHTML = "";
+    for (const name of ["M", "T", "W", "T", "F", "S", "S"]) {
+      const head = document.createElement("span");
+      head.className = "cal-day-name";
+      head.textContent = name;
+      grid.append(head);
+    }
+    // weeks start on Monday
+    const blanks = (month.getDay() + 6) % 7;
+    for (let i = 0; i < blanks; i++) grid.append(document.createElement("span"));
+
+    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    for (let n = 1; n <= daysInMonth; n++) {
+      const date = iso(new Date(month.getFullYear(), month.getMonth(), n));
+      const day = document.createElement("button");
+      day.type = "button";
+      day.className = "cal-day";
+      day.textContent = n;
+      day.setAttribute("aria-label", longDate(date));
+      day.disabled = date < iso(today);
+      if (date === iso(today)) day.classList.add("today");
+      if (date === from || date === to) day.classList.add("picked");
+      if (to) {
+        if (date === from) day.classList.add("start");
+        if (date === to) day.classList.add("finish");
+        if (date > from && date < to) day.classList.add("between");
+      }
+      day.addEventListener("click", () => pickDay(date));
+      grid.append(day);
+    }
+
+    $("dateFrom").value = from;
+    $("dateTo").value = to || from;
+    $("calNote").textContent = to
+      ? `${longDate(from)} to ${longDate(to)}`
+      : `${longDate(from)} only. Click a later day to pick a range.`;
+  }
+
+  function moveMonth(step) {
+    calendar.month = new Date(calendar.month.getFullYear(), calendar.month.getMonth() + step, 1);
+    drawCalendar();
+  }
+  $("calPrev").addEventListener("click", () => moveMonth(-1));
+  $("calNext").addEventListener("click", () => moveMonth(1));
+  drawCalendar();
+
+  // price
   function updatePrice(e) {
     const minEl = $("priceMin"), maxEl = $("priceMax");
     let lo = Number(minEl.value), hi = Number(maxEl.value);
@@ -430,7 +649,7 @@
   $("priceMax").addEventListener("input", updatePrice);
   updatePrice();
 
-  // Starting from: "Use my location" asks the browser, and adds it to the list
+  // use my location
   $("useMyLocation").addEventListener("click", () => {
     const note = $("fromNote");
     note.hidden = false;
@@ -452,8 +671,7 @@
     );
   });
 
-  // 1. UI function: collect every answer on the page. This is the JSON the back end receives.
-  //    money, group, kids_ok and keywords have the same shape as Fiona's user dict.
+  // everything the page sends to app.py
   const checked = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(c => c.value);
 
   function getFilters() {
@@ -461,14 +679,14 @@
     const [lat, lon] = fromOption.value.split(",").map(Number);
     return {
       energy: { level: Number($("energy").value), word: energyWord(), importance: Number($("energyImp").value) },
-      times: checked("time"),                     // 'early evening', 'evening', 'night'
+      times: checked("time"),
       dateFrom: $("dateFrom").value,
       dateTo: $("dateTo").value,
       money: { min: Number($("priceMin").value), max: Number($("priceMax").value), importance: Number($("priceImp").value) },
       group: { size: Number($("group").value), importance: Number($("groupImp").value) },
       kids_ok: $("kids").checked
-        ? { age: Number($("kidAge").value), importance: Number($("kidsImp").value) }
-        : null,                                   // null = no kids coming
+        ? { rating: checked("rating")[0], importance: Number($("kidsImp").value) }
+        : null,
       keywords: checked("keyword"),
       keyword_importance: Number($("keywordImp").value),
       from: { name: fromOption.textContent, lat, lon },
@@ -476,50 +694,119 @@
     };
   }
 
-  // Show the ranked events that come back from rank_events() in Python
+  // results page
   const MODE_LABEL = { walk: "Walk", bike: "Bike", public: "Public transport", car: "Car", taxi: "Taxi" };
-  const tripText = o => `${MODE_LABEL[o.mode]} ${o.minutes} min · ` +
-                        (o.cost_each === 0 ? "free" : `CHF ${o.cost_each.toFixed(2)} each`);
+  const SCORE_LABEL = { time: "Time", trip: "Trip", vibe: "Vibe", price: "Price",
+                        group: "Group", kids: "Kids", keywords: "Keywords" };
 
-  function showResults(events) {
-    const list = $("results");
-    list.innerHTML = "";
-    for (const ev of events) {
-      const li = document.createElement("li");
+  const chf = x => "CHF " + (x % 1 ? x.toFixed(2) : x);
+  const clock = hour => Math.floor(hour) + ":" + (hour % 1 ? "30" : "00");
+  const dateParts = date => {
+    const d = new Date(date + "T12:00");
+    return {
+      weekday: d.toLocaleDateString("en-GB", { weekday: "short" }),
+      day: d.getDate(),
+      month: d.toLocaleDateString("en-GB", { month: "short" }),
+    };
+  };
 
-      const top = document.createElement("div");
-      top.className = "top";
-      const name = document.createElement("span");
-      name.textContent = ev.name;
-      const score = document.createElement("span");
-      score.className = "score";
-      score.textContent = Math.round(ev.score * 100) + "%";
-      top.append(name, score);
-
-      // the way the code picked
-      const trip = document.createElement("div");
-      trip.className = "trip";
-      trip.textContent = tripText(ev.trip) + ` · ${ev.trip.km} km`;
-
-      // the other ways, greyed out
-      const other = document.createElement("div");
-      other.className = "other";
-      for (const o of ev.trip.options) {
-        if (o.mode === ev.trip.mode) continue;
-        const span = document.createElement("span");
-        span.textContent = tripText(o);
-        other.appendChild(span);
-      }
-
-      li.append(top, trip, other);
-      list.appendChild(li);
-    }
+  function el(tag, className, text) {
+    const e = document.createElement(tag);
+    if (className) e.className = className;
+    if (text !== undefined) e.textContent = text;
+    return e;
   }
 
-  // Search: send the answers to Python, show what comes back.
-  $("search").addEventListener("click", async () => {
+  function eventCard(ev) {
+    const card = el("li", "card");
+
+    const d = dateParts(ev.date);
+    const tile = el("div", "date-tile");
+    tile.append(el("span", "", d.weekday), el("strong", "", d.day), el("span", "", d.month));
+
+    const body = el("div", "card-body");
+
+    const top = el("div", "card-top");
+    top.append(el("span", "price", ev.total_cost === 0 ? "Free" : chf(ev.total_cost)),
+               el("span", "match", Math.round(ev.score * 100) + "% match"));
+    const ticket = ev.price === 0 ? "free entry" : "ticket " + chf(ev.price);
+    const travel = ev.trip.cost_each === 0 ? "free to get there" : "travel " + chf(ev.trip.cost_each);
+    const priceNote = el("div", "price-note", `per person · ${ticket} + ${travel}`);
+
+    const name = el("div", "name", ev.name);
+    const when = el("div", "meta", `${clock(ev.start)} · ${ev.venue} · rated ${ev.rating}`);
+
+    const trip = el("div", "meta");
+    trip.append(el("b", "", ev.trip.km + " km away"),
+                ` · ${MODE_LABEL[ev.trip.mode]}, ${ev.trip.minutes} min`);
+    const others = ev.trip.options
+      .filter(o => o.mode !== ev.trip.mode && o.minutes <= 120)
+      .map(o => `${MODE_LABEL[o.mode].toLowerCase()} ${o.minutes} min`
+              + (o.cost_each === 0 ? "" : ` (${chf(o.cost_each)})`));
+    body.append(top, priceNote, name, when, trip);
+    if (others.length) body.append(el("div", "meta", "or " + others.join(", ")));
+
+    // scores under 100%, worst first
+    const weak = Object.entries(ev.scores)
+      .filter(([, v]) => v < 1)
+      .sort((a, b) => a[1] - b[1]);
+    if (ev.score === 0) {
+      const reasons = weak.filter(([, v]) => v === 0).map(([k]) => SCORE_LABEL[k] || k);
+      body.append(el("div", "weak-points", "Ruled out by: " + reasons.join(", ")));
+    } else if (weak.length) {
+      const text = weak.map(([k, v]) => `${SCORE_LABEL[k] || k} ${Math.round(v * 100)}%`).join(" · ");
+      body.append(el("div", "weak-points", "Not perfect: " + text));
+    }
+
+    card.append(tile, body);
+    return card;
+  }
+
+  const SORTS = {
+    best:     (a, b) => b.score - a.score,
+    cheapest: (a, b) => a.total_cost - b.total_cost,
+    closest:  (a, b) => a.trip.km - b.trip.km,
+    soonest:  (a, b) => (a.date + a.start).localeCompare(b.date + b.start),
+  };
+  let lastEvents = [];
+  let sortBy = "best";
+
+  function showResults(events) {
+    lastEvents = events;
+    const good = events.filter(ev => ev.score > 0).sort(SORTS[sortBy]);
+    const out = events.filter(ev => ev.score === 0);
+
+    $("results").replaceChildren(...good.map(eventCard));
+    if (good.length === 0) $("results").append(el("li", "note", "Nothing fits. Try other dates or change your answers."));
+
+    $("ruledOut").hidden = out.length === 0;
+    $("ruledOutTitle").textContent = `${out.length} ruled out`;
+    $("ruledOutList").replaceChildren(...out.map(eventCard));
+    $("sortBar").hidden = good.length < 2;
+  }
+
+  for (const button of document.querySelectorAll("#sortBar button")) {
+    button.addEventListener("click", () => {
+      sortBy = button.dataset.sort;
+      for (const b of document.querySelectorAll("#sortBar button")) {
+        b.setAttribute("aria-pressed", b === button ? "true" : "false");
+      }
+      showResults(lastEvents);
+    });
+  }
+
+  function summaryText(f) {
+    const day = d => new Date(d + "T12:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    return `${day(f.dateFrom)} to ${day(f.dateTo)} · CHF ${f.money.min} to ${f.money.max}`
+         + ` · from ${f.from.name} · ${f.energy.word}`;
+  }
+
+  async function search() {
     const filters = getFilters();
     const out = $("output");
+    $("filtersPage").hidden = true;
+    $("resultsPage").hidden = false;
+    $("summary").textContent = summaryText(filters);
     try {
       const res = await fetch("/api/search", {
         method: "POST",
@@ -527,17 +814,48 @@
         body: JSON.stringify(filters),
       });
       if (!res.ok) throw new Error(res.status);
+      const events = await res.json();
       out.hidden = true;
-      showResults(await res.json());
+      $("summary").textContent = `${events.length} events · ` + summaryText(filters);
+      showResults(events);
     } catch {
       $("results").innerHTML = "";
+      $("sortBar").hidden = true;
+      $("ruledOut").hidden = true;
       out.hidden = false;
       out.textContent = "Back end not running (start it with: python app.py).\n"
                       + "This is what Search sends:\n\n" + JSON.stringify(filters, null, 2);
     }
-  });
+  }
 
-  window.getFilters = getFilters;
+  // steps
+  const steps = [...document.querySelectorAll(".step")];
+  const stepButtons = [...document.querySelectorAll("#stepNav button")];
+  let current = 0;
+
+  function showStep(i) {
+    current = i;
+    steps.forEach((step, n) => { step.hidden = n !== i; });
+    stepButtons.forEach((b, n) => {
+      b.classList.toggle("done", n < i);
+      if (n === i) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+    });
+    $("back").hidden = i === 0;
+    $("next").textContent = i === steps.length - 1 ? "Search" : "Next";
+    $("filtersPage").hidden = false;
+    $("resultsPage").hidden = true;
+    window.scrollTo(0, 0);
+  }
+
+  stepButtons.forEach((b, n) => b.addEventListener("click", () => showStep(n)));
+  $("back").addEventListener("click", () => showStep(current - 1));
+  $("next").addEventListener("click", () => {
+    if (current < steps.length - 1) showStep(current + 1);
+    else search();
+  });
+  $("edit").addEventListener("click", () => showStep(current));
+  showStep(0);
+
 </script>
 </body>
 </html>

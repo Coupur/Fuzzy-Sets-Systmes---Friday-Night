@@ -8,8 +8,10 @@ needs numpy. The results are the same.
 
     energy_membership('good', 7, 5)        -> 0.422
     time_membership(17.0)                  -> {'early evening': 1.0, 'evening': 0.33, 'night': 0.0}
-    keyword_membership(alpha=1, beta=0.5)  -> 0.5
+    keyword_membership(alpha=1, beta=0.5)  -> 0.5     (0-1: 0 if the event doesn't have it)
 """
+
+from datetime import datetime
 
 import numpy as np
 
@@ -98,15 +100,38 @@ def time_membership(hour):
 # For a keyword the user selected:
 #   alpha = 1 if the event has it, 0 if not
 #   beta  = the user's importance, 0 (trivial) to 1 (mandatory)
-# m goes from -1 (wanted it a lot, event doesn't have it) to 1 (wanted it a lot, event has it)
+# m goes from 0 to 1:
+#   alpha = 1, beta = 0.5 -> m = 0.5
+#   alpha = 1, beta = 1   -> m = 1
+#   alpha = 1, beta = 0   -> m = 0
+#   alpha = 0             -> m = 0
 # ---------------------------------------------------------------------------
 
 def keyword_membership(alpha, beta):
-    """Return keyword relevance m in [-1, 1]. Only call this for keywords the user selected."""
+    """Return keyword relevance m in [0, 1]. Only call this for keywords the user selected.
+    alpha = 1 if event has keyword, 0 otherwise.
+    beta = user importance 0 (trivial) to 1 (mandatory).
+    """
     if alpha == 1:
-        return alpha - abs(1 - beta)  # == beta for beta in [0,1]
+        return beta  # == beta for beta in [0,1]
     else:
-        return alpha - beta  # == -beta
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# Date
+# ---------------------------------------------------------------------------
+
+# quick function to check if an event occurs within the selected date range
+def date_passes(event_date, start_date, end_date):
+    if not start_date or not end_date:  # no dates selected = show all
+        return True
+
+    event_date = datetime.strptime(event_date, "%Y-%m-%d").date()
+    start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+    return start_date <= event_date <= end_date
 
 
 # Run this file on its own to check it matches the notebook:  python Fuzzy/marlenes_part.py
@@ -114,4 +139,5 @@ if __name__ == "__main__":
     print("energy 'good', importance 7, event 5 ->", energy_membership('good', 7, 5), "(notebook: 0.422)")
     print("17:00 ->", time_membership(17.0))
     print("keyword alpha=1 beta=0.5 ->", keyword_membership(1, 0.5), "(notebook: 0.5)")
-    print("keyword alpha=0 beta=0.8 ->", keyword_membership(0, 0.8), "(notebook: -0.8)")
+    print("keyword alpha=0 beta=0.8 ->", keyword_membership(0, 0.8), "(notebook: 0)")
+    print("date 2026-11-15 in 14-17 Nov ->", date_passes("2026-11-15", "2026-11-14", "2026-11-17"), "(notebook: True)")
