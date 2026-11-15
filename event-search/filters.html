@@ -353,7 +353,7 @@
   }
 
   // Show the ranked events that come back from rank_events() in Python
-  const MODE_LABEL = { walk: "Walk", bike: "Bike", public: "Public transport", car: "🚗 Car", taxi: "🚕 Taxi" };
+  const MODE_LABEL = { walk: "Walk", bike: "Bike", public: "Public transport", car: "Car", taxi: "Taxi" };
   const tripText = o => `${MODE_LABEL[o.mode]} ${o.minutes} min · ` +
                         (o.cost_each === 0 ? "free" : `CHF ${o.cost_each.toFixed(2)} each`);
 
