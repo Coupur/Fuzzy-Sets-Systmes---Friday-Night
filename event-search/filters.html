@@ -12,6 +12,7 @@
     --track: #e4e4e4;
     --field: #f2f2f2;
     --accent: #2f6fdf;
+    --accent-soft: #e6eefc;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -21,6 +22,7 @@
       --track: #3a3a3a;
       --field: #262626;
       --accent: #5b8ef0;
+      --accent-soft: #1e2a42;
     }
   }
 
@@ -102,25 +104,52 @@
     margin-top: 8px;
   }
 
-  /* Distance stop labels above the slider */
-  .stops {
-    position: relative;
-    height: 22px;
-    margin-bottom: 8px;
-  }
-  .stops button {
-    position: absolute;
-    transform: translateX(-50%);
+  /* Starting from */
+  .from { display: flex; gap: 8px; }
+  .from select { flex: 1; }
+  .link {
     background: none;
     border: none;
-    padding: 0;
+    padding: 0 4px;
     font: inherit;
-    color: var(--muted);
+    font-size: 14px;
+    color: var(--accent);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .note { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+
+  /* Results */
+  .results { list-style: none; padding: 0; margin: 16px 0 0; }
+  .results li { padding: 14px 0; border-bottom: 1px solid var(--track); }
+  .results .top { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; }
+  .results .score { color: var(--accent); }
+  .results .trip { margin-top: 4px; }
+  .results .other { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .results .other span { white-space: nowrap; margin-right: 14px; }
+
+  /* Search */
+  .search {
+    width: 100%;
+    padding: 12px;
+    font: inherit;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
   }
-  .stops button:first-child { transform: none; }
-  .stops button:last-child  { transform: translateX(-100%); }
-  .stops button.active { color: var(--accent); font-weight: 600; }
+  .search:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  #output {
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--field);
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
 
   /* Time and date */
   .times { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 20px; }
@@ -193,30 +222,53 @@
       <h2>Group size</h2>
     </div>
     <select id="group" aria-label="Group size">
-      <option value="any">Any</option>
-      <option value="1">1+</option>
-      <option value="2">2+</option>
-      <option value="3">3+</option>
+      <option value="1">Just me</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+      <option value="6">6</option>
+      <option value="8">7–9</option>
+      <option value="10">10+</option>
     </select>
   </section>
 
   <section>
     <div class="head">
-      <h2>Distance</h2>
-      <span class="value" id="distValue"></span>
+      <h2>Starting from</h2>
     </div>
-    <div class="stops" id="distStops">
-      <button type="button" data-i="0">Walk</button>
-      <button type="button" data-i="1">Bike</button>
-      <button type="button" data-i="2">Commute</button>
-      <button type="button" data-i="3">Travel</button>
+    <div class="from">
+      <!-- value = "latitude,longitude" -->
+      <select id="from" aria-label="Starting from">
+        <option value="46.9490,7.4391">Bern HB</option>
+        <option value="46.9580,7.4290">Bern Länggasse</option>
+        <option value="46.9600,7.4550">Bern Breitenrain</option>
+        <option value="46.9240,7.4140">Köniz</option>
+        <option value="46.7580,7.6280">Thun</option>
+        <option value="46.8030,7.1510">Fribourg</option>
+        <option value="47.1370,7.2470">Biel</option>
+      </select>
+      <button type="button" class="link" id="useMyLocation">Use my location</button>
     </div>
-    <div class="slider">
-      <div class="track"></div>
-      <div class="fill" id="distFill" style="left:0"></div>
-      <input type="range" id="dist" min="0" max="3" step="1" value="1" aria-label="Distance">
+    <p class="note" id="fromNote" hidden></p>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Getting there</h2>
+    </div>
+    <div class="times">
+      <label><input type="checkbox" name="mode" value="walk" checked> Walk</label>
+      <label><input type="checkbox" name="mode" value="bike"> Bike</label>
+      <label><input type="checkbox" name="mode" value="public" checked> Public transport</label>
+      <label><input type="checkbox" name="mode" value="car"> Car</label>
+      <label><input type="checkbox" name="mode" value="taxi"> Taxi</label>
     </div>
   </section>
+
+  <button type="button" class="search" id="search">Search</button>
+  <ol class="results" id="results"></ol>
+  <pre id="output" hidden></pre>
 
 </main>
 
@@ -261,32 +313,32 @@
   $("priceMax").addEventListener("input", updatePrice);
   updatePrice();
 
-  // Distance: four stops, labels sit over each stop
-  const DIST = [
-    { key: "walk",    label: "Walk",    km: 5 },
-    { key: "bike",    label: "Bike",    km: 20 },
-    { key: "commute", label: "Commute", km: 45 },
-    { key: "travel",  label: "Travel",  km: 100 },
-  ];
-  const stopButtons = [...$("distStops").children];
-  stopButtons.forEach((b, i) => {
-    // match the thumb centre: 10px is half the thumb width
-    b.style.left = `calc(10px + (100% - 20px) * ${i / 3})`;
-    if (i === 0) b.style.left = "0";
-    if (i === 3) b.style.left = "100%";
-    b.addEventListener("click", () => { $("dist").value = i; updateDist(); });
+  // Starting from: "Use my location" asks the browser, and adds it to the list
+  $("useMyLocation").addEventListener("click", () => {
+    const note = $("fromNote");
+    note.hidden = false;
+    if (!navigator.geolocation) {
+      note.textContent = "This browser can't share a location. Pick a place from the list.";
+      return;
+    }
+    note.textContent = "Finding you…";
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const option = document.createElement("option");
+        option.value = pos.coords.latitude.toFixed(4) + "," + pos.coords.longitude.toFixed(4);
+        option.textContent = "My location";
+        $("from").prepend(option);
+        $("from").value = option.value;
+        note.hidden = true;
+      },
+      () => { note.textContent = "Couldn't get your location. Pick a place from the list."; }
+    );
   });
-  function updateDist() {
-    const i = Number($("dist").value);
-    $("distFill").style.right = (100 - pct($("dist"))) + "%";
-    stopButtons.forEach((b, j) => b.classList.toggle("active", j === i));
-    $("distValue").textContent = "Up to " + DIST[i].km + " km";
-  }
-  $("dist").addEventListener("input", updateDist);
-  updateDist();
 
-  // Current filter values, for wiring into the search
+  // 1. UI function: collect every answer on the page. This is the JSON the back end receives.
   function getFilters() {
+    const fromOption = $("from").selectedOptions[0];
+    const [lat, lon] = fromOption.value.split(",").map(Number);
     return {
       energy: Number($("energy").value),
       times: [...document.querySelectorAll('input[name="time"]:checked')].map(c => c.value),
@@ -295,9 +347,72 @@
       priceMin: Number($("priceMin").value),
       priceMax: Number($("priceMax").value),
       group: $("group").value,
-      distance: DIST[Number($("dist").value)].key,
+      from: { name: fromOption.textContent, lat, lon },
+      modes: [...document.querySelectorAll('input[name="mode"]:checked')].map(c => c.value),
     };
   }
+
+  // Show the ranked events that come back from rank_events() in Python
+  const MODE_LABEL = { walk: "🚶 Walk", bike: "🚲 Bike", public: "🚋 Public transport", car: "🚗 Car", taxi: "🚕 Taxi" };
+  const tripText = o => `${MODE_LABEL[o.mode]} ${o.minutes} min · ` +
+                        (o.cost_each === 0 ? "free" : `CHF ${o.cost_each.toFixed(2)} each`);
+
+  function showResults(events) {
+    const list = $("results");
+    list.innerHTML = "";
+    for (const ev of events) {
+      const li = document.createElement("li");
+
+      const top = document.createElement("div");
+      top.className = "top";
+      const name = document.createElement("span");
+      name.textContent = ev.name;
+      const score = document.createElement("span");
+      score.className = "score";
+      score.textContent = Math.round(ev.score * 100) + "%";
+      top.append(name, score);
+
+      // the way the code picked
+      const trip = document.createElement("div");
+      trip.className = "trip";
+      trip.textContent = tripText(ev.trip) + ` · ${ev.trip.km} km`;
+
+      // the other ways, greyed out
+      const other = document.createElement("div");
+      other.className = "other";
+      for (const o of ev.trip.options) {
+        if (o.mode === ev.trip.mode) continue;
+        const span = document.createElement("span");
+        span.textContent = tripText(o);
+        other.appendChild(span);
+      }
+
+      li.append(top, trip, other);
+      list.appendChild(li);
+    }
+  }
+
+  // Search: send the answers to Python, show what comes back.
+  $("search").addEventListener("click", async () => {
+    const filters = getFilters();
+    const out = $("output");
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(filters),
+      });
+      if (!res.ok) throw new Error(res.status);
+      out.hidden = true;
+      showResults(await res.json());
+    } catch {
+      $("results").innerHTML = "";
+      out.hidden = false;
+      out.textContent = "Back end not running (start it with: python app.py).\n"
+                      + "This is what Search sends:\n\n" + JSON.stringify(filters, null, 2);
+    }
+  });
+
   window.getFilters = getFilters;
 </script>
 </body>
