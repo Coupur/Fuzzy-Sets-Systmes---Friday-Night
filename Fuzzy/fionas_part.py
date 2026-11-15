@@ -9,13 +9,13 @@ import numpy as np
 
 try:
     # when app.py uses this file
-    from Fuzzy.marlenes_part import energy_membership, time_membership, keyword_membership, keyword_fit
-    from Fuzzy.Samuels_Fuzzy_Functions import plan_trip, SPECIAL, BERN
+    from Fuzzy.marlenes_part import energy_membership, time_membership, keyword_membership, keyword_fit, date_passes
+    from Fuzzy.Samuels_Fuzzy_Functions import plan_trip, trip_score, BERN
     from Fuzzy.event_data import EVENTS, SAMPLE_USER, RATING_AGE
 except ImportError:
     # when this file is run on its own
-    from marlenes_part import energy_membership, time_membership, keyword_membership, keyword_fit
-    from Samuels_Fuzzy_Functions import plan_trip, SPECIAL, BERN
+    from marlenes_part import energy_membership, time_membership, keyword_membership, keyword_fit, date_passes
+    from Samuels_Fuzzy_Functions import plan_trip, trip_score, BERN
     from event_data import EVENTS, SAMPLE_USER, RATING_AGE
 
 def shape(a, b, c, d, x):
@@ -160,32 +160,10 @@ def score_time(event, u, trip):
     return generous_or([mu[t] for t in u['times']])
 
 
-def score_date(event, u):
-    """Crisp filter: 1 if the event is inside the date range, else 0."""
-    d_from, d_to = u.get('dateFrom'), u.get('dateTo')
-    if not d_from and not d_to:
-        return None
-    if d_from and event['date'] < d_from: # 'YYYY-MM-DD'
-        return 0.0
-    if d_to and event['date'] > d_to:
-        return 0.0
-    return 1.0
-
-
 def score_distance(event, u, trip):
-    """How well the trip fits the user's energy.
-
-    The trip effort is on a 0-10 scale, so the user's energy 1-5 is stretched to 0-10.
-    Up to that energy the score is 1, then it halves for every extra point of effort.
-    The more special the event, the less the trip counts."""
+    """How well the trip fits the user's energy (Sam's trip_score)."""
     energy_level = (u.get('energy') or {}).get('level', 3)    # 3 if missing
-    energy = (energy_level - 1) * 2.5
-    if trip['effort'] <= energy:
-        energy_match = 1.0
-    else:
-        energy_match = 2 ** -(trip['effort'] - energy)
-    special = SPECIAL.get(event.get('repeats'), 0)
-    return energy_match ** (1 - special)
+    return trip_score(trip, energy_level, event)
 
 
 # Combining the fitting of membership functions and keywords separately
@@ -248,7 +226,7 @@ def rank(u, events=EVENTS):
     """
     rows = []
     for e in events:
-        if score_date(e, u) == 0:      # other dates are filtered out
+        if not date_passes(e['date'], u.get('dateFrom'), u.get('dateTo')):   # Marlene's date filter
             continue
         trip = trip_for(e, u)
         total, scores = relevance(e, u, trip)
