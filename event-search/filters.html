@@ -224,19 +224,6 @@
   .times label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
   .times input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
 
-  /* kids rating */
-  .ratings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
-  .ratings label {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 10px 4px;
-    border: 1px solid var(--track); border-radius: 8px;
-    cursor: pointer;
-  }
-  .ratings input { position: absolute; opacity: 0; pointer-events: none; }
-  .ratings span { color: var(--muted); font-size: 13px; }
-  .ratings label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-  .ratings label:has(input:focus-visible) { outline: 2px solid var(--text); outline-offset: 2px; }
-
   /* importance sliders */
   .importance { margin-top: 20px; }
   .imp-head {
@@ -481,13 +468,12 @@
         <label><input type="checkbox" id="kids"> Bringing kids</label>
       </div>
       <div id="kidsRating" hidden>
-        <p class="note">Highest rating that's OK for them</p>
-        <div class="ratings">
-          <label><input type="radio" name="rating" value="G"><b>G</b><span>All ages</span></label>
-          <label><input type="radio" name="rating" value="PG" checked><b>PG</b><span>6+</span></label>
-          <label><input type="radio" name="rating" value="PG-13"><b>PG-13</b><span>12+</span></label>
-          <label><input type="radio" name="rating" value="R"><b>R</b><span>16+</span></label>
-        </div>
+        <select id="rating" aria-label="Highest rating that's OK for the kids">
+          <option value="G">G: all ages</option>
+          <option value="PG" selected>PG: 6+</option>
+          <option value="PG-13">PG-13: 12+</option>
+          <option value="R">R: 16+</option>
+        </select>
       </div>
       <div class="importance" id="kidsImportance" hidden>
         <div class="imp-head"><span>How much it matters</span><span id="kidsImpValue"></span></div>
@@ -685,7 +671,7 @@
       money: { min: Number($("priceMin").value), max: Number($("priceMax").value), importance: Number($("priceImp").value) },
       group: { size: Number($("group").value), importance: Number($("groupImp").value) },
       kids_ok: $("kids").checked
-        ? { rating: checked("rating")[0], importance: Number($("kidsImp").value) }
+        ? { rating: $("rating").value, importance: Number($("kidsImp").value) }
         : null,
       keywords: checked("keyword"),
       keyword_importance: Number($("keywordImp").value),

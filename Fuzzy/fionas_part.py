@@ -9,14 +9,14 @@ import numpy as np
 
 try:
     # when app.py uses this file
-    from Fuzzy.marlenes_part import energy_membership, time_membership, keyword_membership
+    from Fuzzy.marlenes_part import energy_membership, time_membership, keyword_membership, keyword_fit
     from Fuzzy.Samuels_Fuzzy_Functions import plan_trip, SPECIAL, BERN
-    from Fuzzy.event_data import EVENTS, SAMPLE_USER
+    from Fuzzy.event_data import EVENTS, SAMPLE_USER, RATING_AGE
 except ImportError:
     # when this file is run on its own
-    from marlenes_part import energy_membership, time_membership, keyword_membership
+    from marlenes_part import energy_membership, time_membership, keyword_membership, keyword_fit
     from Samuels_Fuzzy_Functions import plan_trip, SPECIAL, BERN
-    from event_data import EVENTS, SAMPLE_USER
+    from event_data import EVENTS, SAMPLE_USER, RATING_AGE
 
 def shape(a, b, c, d, x):
     """Trapezoid fuzzy set: rises from a to b, stays at 1 until c, falls to d."""
@@ -139,7 +139,10 @@ def score_kids_ok(event, u, trip):
     if u.get('kids_ok') is None: # no kids come -> this criterion is left out
         return None
     k = u['kids_ok']
-    return float(kids_ok_membership(event['min_age'], k['importance'], x=at(k['age']))[0])
+    # movie ratings as ages: G 0, PG 6, PG-13 12, R 16, NC-17 18
+    event_age = RATING_AGE[event['rating']]
+    allowed_age = RATING_AGE[k['rating']]
+    return float(kids_ok_membership(event_age, k['importance'], x=at(allowed_age))[0])
 
 
 def score_energy(event, u, trip):
@@ -196,27 +199,18 @@ def generous_or(mu):
     return float(1 - np.prod(1 - np.asarray(mu, float)))
 
 
-# Keywords: generous OR. This is high as soon as one keyword of the event matches the user's needs
-def keyword_degree(event, keyword, importance):
-    """How well the event fits one keyword the user selected, as a score from 0 to 1.
-
-    event      the event dict
-    keyword    one keyword the user selected
-    importance  the keyword importance slider (0-10)
-    """
-    alpha = 1 if keyword in event['keywords'] else 0
-    beta = float(np.clip(importance / 10, 0, 1)) # slider 0-10 -> 0-1
-    m = keyword_membership(alpha, beta)
-    return float(np.clip(m, 0, 1))
-
-
+# Keywords: Marlene's -1..1 values are added up, so a missing keyword lowers the score
+# but can't make it 0 on its own (only if every keyword is missing and the importance is 10)
 def score_keywords(event, u, trip):
     if not u.get('keywords'):      # no keywords selected -> this criterion is left out
         return None
     imp = u.get('keyword_importance', 5)
     if imp <= 0:                   # importance 0 --> left out
         return None
-    return generous_or([keyword_degree(event, k, imp) for k in u['keywords']])
+    beta = float(np.clip(imp / 10, 0, 1))   # slider 0-10 -> 0-1
+    total = sum(keyword_fit(1 if k in event['keywords'] else 0, beta) for k in u['keywords'])
+    fit = total / len(u['keywords'])        # average fit, -1..1
+    return 1 + (fit - beta) / 2             # all there -> 1, none there -> 1 - importance
 
 
 # Strict-AND criteria. Every criterion has to be good. If one score is 0, the result is 0

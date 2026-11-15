@@ -118,6 +118,16 @@ def keyword_membership(alpha, beta):
         return 0
 
 
+def keyword_fit(alpha, beta):
+    """The first version, m in [-1, 1], made for adding up the keywords.
+    -1 = wanted it a lot, event doesn't have it, 1 = wanted it a lot, event has it.
+    """
+    if alpha == 1:
+        return alpha - abs(1 - beta)  # == beta
+    else:
+        return alpha - beta  # == -beta
+
+
 # ---------------------------------------------------------------------------
 # Date
 # ---------------------------------------------------------------------------
