@@ -1,9 +1,9 @@
 
 # Contributions
-Sam: 
+Sam:
 Github
-Front end / UI 
-membership fuctions - Distance 
+Front end / UI
+membership fuctions - Distance
 Link ui and notbook
 Google Doc
 
@@ -17,7 +17,7 @@ Sample Data
 Google Doc
 
 
-Marlene: 
+Marlene:
 membership fuctions - Energy
 membership fuctions - Time/Date
 Keyword Calculations
