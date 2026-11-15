@@ -8,12 +8,18 @@ How one Search click flows through the code:
     this file      rank_events()       for every event:
                        plan_trip()         distance -> mode -> minutes -> cost -> effort
                        energy match        trip effort vs. the user's energy
-                       importance          special events count the trip less
+                       special             special events count the trip less
                        money check         ticket + travel cost vs. price slider
                    sorts the events and sends them back to the page
 """
 
 import math
+
+# The events come from Fiona's data file
+try:
+    from Fuzzy.event_data import EVENTS     # when app.py uses this file
+except ImportError:
+    from event_data import EVENTS           # when this file is run on its own
 
 
 # ---------------------------------------------------------------------------
@@ -42,22 +48,10 @@ CHF_PER_EFFORT_POINT = 5
 BERN = {"name": "Bern HB", "lat": 46.9490, "lon": 7.4391}
 
 
-# ---------------------------------------------------------------------------
-# Sample events. Fiona's real data replaces this: each event needs these fields.
-#   lat, lon     where it is
-#   price        ticket price per person in CHF
-#   importance   how special it is: 0 = happens every week, 1 = once a year
-# ---------------------------------------------------------------------------
-
-EVENTS = [
-    {"name": "Pub quiz near the station",     "lat": 46.9485, "lon": 7.4415, "price": 0,  "importance": 0.1},
-    {"name": "Board game cafe, Länggasse",    "lat": 46.9580, "lon": 7.4270, "price": 8,  "importance": 0.2},
-    {"name": "Jazz in the old town",          "lat": 46.9478, "lon": 7.4520, "price": 25, "importance": 0.4},
-    {"name": "Open-air cinema on the Gurten", "lat": 46.9190, "lon": 7.4395, "price": 18, "importance": 0.6},
-    {"name": "Comedy night in Biel",          "lat": 47.1370, "lon": 7.2470, "price": 30, "importance": 0.3},
-    {"name": "Lake concert in Thun",          "lat": 46.7580, "lon": 7.6280, "price": 40, "importance": 0.8},
-    {"name": "Food festival in Fribourg",     "lat": 46.8030, "lon": 7.1510, "price": 15, "importance": 0.9},
-]
+# Event fields this file uses (in event_data.py):
+#   lat, lon      where it is (if missing, distance_km is used instead)
+#   price         ticket price per person in CHF
+#   special       how special it is: 0 = happens every week, 1 = once a year (0 if missing)
 
 
 def plan_trip(origin, modes, group_size, event):
@@ -76,10 +70,14 @@ def plan_trip(origin, modes, group_size, event):
 
     # 1. Distance. Straight line, then x 1.3 for roads.
     #    1 degree of latitude is 111 km; 1 degree of longitude is 111 km x cos(latitude).
-    dy = (event["lat"] - origin["lat"]) * 111
-    dx = (event["lon"] - origin["lon"]) * 111 * math.cos(math.radians(origin["lat"]))
-    straight_km = math.sqrt(dx * dx + dy * dy)
-    km = straight_km * DETOUR
+    if "lat" in event and "lon" in event:
+        dy = (event["lat"] - origin["lat"]) * 111
+        dx = (event["lon"] - origin["lon"]) * 111 * math.cos(math.radians(origin["lat"]))
+        straight_km = math.sqrt(dx * dx + dy * dy)
+        km = straight_km * DETOUR
+    else:
+        # no location yet: use the fixed distance from the data (ignores where the user starts)
+        km = event["distance_km"]
 
     # 2. Try every mode the user is OK with.
     options = []
@@ -109,9 +107,9 @@ def plan_trip(origin, modes, group_size, event):
             cars = math.ceil(group_size / 5)
             cost_each = cars * (0.20 * km + 5) / group_size
 
-        # 2c. Trip effort on the same 0-10 scale as the energy slider
+        # 2c. Trip effort, compared with the 0-10 energy slider.
+        #     Very long trips go above 10, which just means "harder than any energy level".
         effort = settings["hassle"] + minutes * settings["effort_per_min"]
-        effort = min(effort, 10)
 
         options.append({
             "mode": mode,
@@ -162,9 +160,10 @@ def rank_events(answers, events=EVENTS):
         else:
             energy_match = 2 ** -(trip["effort"] - energy)
 
-        # 4. Importance. The more special the event, the less the energy match counts.
-        #    importance 0 -> score stays as it is, importance 1 -> score becomes 1.
-        trip_score = energy_match ** (1 - event["importance"])
+        # 4. Special events. The more special the event, the less the energy match counts.
+        #    special 0 -> score stays as it is, special 1 -> score becomes 1.
+        special = event.get("special", 0)
+        trip_score = energy_match ** (1 - special)
 
         # 5. Money (placeholder until Fiona's money function): ticket + travel.
         #    Fine up to the max price, then halves for every CHF 10 over.
