@@ -6,6 +6,7 @@ How one Search click flows through the code:
     filters.html   getFilters()        collects the answers -> JSON
     app.py         /api/search         receives the JSON, calls rank_events()
     this file      rank_events()       for every event:
+                       in_date_range()     skip events outside the From-To dates
                        plan_trip()         distance -> mode -> minutes -> cost -> effort
                        energy match        trip effort vs. the user's energy
                        special             special events count the trip less
@@ -51,7 +52,19 @@ BERN = {"name": "Bern HB", "lat": 46.9490, "lon": 7.4391}
 # Event fields this file uses (in event_data.py):
 #   lat, lon      where it is (if missing, distance_km is used instead)
 #   price         ticket price per person in CHF
-#   special       how special it is: 0 = happens every week, 1 = once a year (0 if missing)
+#   date          'YYYY-MM-DD'
+#   repeats       how often it happens -> how special it is (0 = not special, 1 = very)
+SPECIAL = {"weekly": 0.1, "monthly": 0.3, "seasonal": 0.5, "once": 0.7, "yearly": 1.0}
+
+
+def in_date_range(event, date_from, date_to):
+    """True if the event is between the From and To dates (crisp: in or out).
+    Dates are 'YYYY-MM-DD' text, which sorts the same way as real dates."""
+    if date_from and event["date"] < date_from:
+        return False
+    if date_to and event["date"] > date_to:
+        return False
+    return True
 
 
 def plan_trip(origin, modes, group_size, event):
@@ -107,7 +120,7 @@ def plan_trip(origin, modes, group_size, event):
             cars = math.ceil(group_size / 5)
             cost_each = cars * (0.20 * km + 5) / group_size
 
-        # 2c. Trip effort, compared with the 0-10 energy slider.
+        # 2c. Trip effort on a 0-10 scale (the user's energy 1-5 is stretched to 0-10 to compare).
         #     Very long trips go above 10, which just means "harder than any energy level".
         effort = settings["hassle"] + minutes * settings["effort_per_min"]
 
@@ -139,33 +152,41 @@ def rank_events(answers, events=EVENTS):
     answers is the JSON from getFilters() in filters.html.
     """
 
-    # 1. Read the answers this needs
+    # 1. Read the answers this needs (the shape is in getFilters() in filters.html)
     origin = answers.get("from") or BERN
-    modes = answers.get("modes") or ["walk"]          # nothing ticked -> walking only
-    energy = answers.get("energy", 5)                  # 0-10 from the energy slider
-    price_max = answers.get("priceMax", 200)
-    group = str(answers.get("group", "any"))
-    group_size = int(group) if group.isdigit() else 1
+    modes = answers.get("modes") or ["walk"]                     # nothing ticked -> walking only
+    energy_level = answers.get("energy", {}).get("level", 3)    # 1-5 (drained ... buzzing)
+    price_max = answers.get("money", {}).get("max", 200)
+    group_size = answers.get("group", {}).get("size", 1)
+    date_from = answers.get("dateFrom")
+    date_to = answers.get("dateTo")
+
+    # The trip effort is on a 0-10 scale, so stretch energy 1-5 to 0-10: 1->0, 3->5, 5->10
+    energy = (energy_level - 1) * 2.5
 
     results = []
     for event in events:
 
-        # 2. How do we get there, and how tiring is it?
+        # 2. Date filter: skip events outside the dates the user picked
+        if not in_date_range(event, date_from, date_to):
+            continue
+
+        # 3. How do we get there, and how tiring is it?
         trip = plan_trip(origin, modes, group_size, event)
 
-        # 3. Energy match. A box up to my energy level, then halves for every
+        # 4. Energy match. A box up to my energy level, then halves for every
         #    point the trip is harder than that, but never reaches 0.
         if trip["effort"] <= energy:
             energy_match = 1.0
         else:
             energy_match = 2 ** -(trip["effort"] - energy)
 
-        # 4. Special events. The more special the event, the less the energy match counts.
+        # 5. Special events. The more special the event, the less the energy match counts.
         #    special 0 -> score stays as it is, special 1 -> score becomes 1.
-        special = event.get("special", 0)
+        special = SPECIAL.get(event.get("repeats"), 0)
         trip_score = energy_match ** (1 - special)
 
-        # 5. Money (placeholder until Fiona's money function): ticket + travel.
+        # 6. Money (placeholder until Fiona's money function): ticket + travel.
         #    Fine up to the max price, then halves for every CHF 10 over.
         total_cost = event["price"] + trip["cost_each"]
         if total_cost <= price_max:
@@ -173,11 +194,11 @@ def rank_events(answers, events=EVENTS):
         else:
             money_score = 2 ** -((total_cost - price_max) / 10)
 
-        # 6. Teammates' scores go here when they're ready, e.g.
+        # 7. Teammates' scores go here when they're ready, e.g.
         #    time_score = ...      (Marlene)
         #    group_score = ...     (Fiona)
 
-        # 7. Final score: an event is only as good as its weakest part (fuzzy AND)
+        # 8. Final score: an event is only as good as its weakest part (fuzzy AND)
         score = min(trip_score, money_score)
 
         results.append({
@@ -189,17 +210,20 @@ def rank_events(answers, events=EVENTS):
             "trip": trip,
         })
 
-    # 8. Best first
+    # 9. Best first
     results.sort(key=lambda r: r["score"], reverse=True)
     return results
 
 
 # Run this file on its own to test without the website:  python Fuzzy/Samuels_Fuzzy_Functions.py
 if __name__ == "__main__":
-    for energy in (2, 8):
-        answers = {"from": BERN, "modes": ["walk", "bike", "public"], "energy": energy,
-                   "priceMax": 60, "group": "1"}
-        print(f"\nEnergy {energy}, from Bern HB, walk/bike/public:")
+    THUN = {"name": "Thun", "lat": 46.7580, "lon": 7.6280}
+    for level in (1, 5):
+        answers = {"from": THUN, "modes": ["walk", "bike", "public"],
+                   "energy": {"level": level, "word": "", "importance": 5},
+                   "money": {"min": 0, "max": 60, "importance": 5}, "group": {"size": 1, "importance": 5},
+                   "dateFrom": "2026-11-15", "dateTo": "2026-11-22"}
+        print(f"\nEnergy level {level}, from Thun, 15-22 Nov, walk/bike/public:")
         for r in rank_events(answers):
             t = r["trip"]
             print(f"  {r['score']:.2f}  {r['name']:<31} {t['mode']:<6} {t['km']:>5} km "

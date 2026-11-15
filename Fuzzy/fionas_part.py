@@ -143,10 +143,10 @@ def generous_or(mu):
 def keyword_degree(event, keyword):
     """How well the event matches one keyword (0-1).
 
-    TODO For now it takes just an artificial value from the table. Replace this by the keyword
-    membership functions once they are ready.
+    The event's keywords are now a list (like checkboxes): 1 if it has the keyword, else 0.
+    TODO Replace this by Marlene's keyword_membership once it's linked.
     """
-    return event['keywords'].get(keyword, 0.0)
+    return 1.0 if keyword in event['keywords'] else 0.0
 
 
 def score_keywords(event, u):

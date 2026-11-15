@@ -154,7 +154,27 @@
   /* Time and date */
   .times { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 20px; }
   .times label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-  .times input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+  .times input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+  input[type="number"] {
+    font: inherit;
+    color: var(--text);
+    background: var(--field);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 8px;
+    width: 64px;
+    color-scheme: light dark;
+  }
+
+  /* "How much it matters" slider under a section */
+  .importance { margin-top: 20px; }
+  .imp-head {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
 
   .dates { display: flex; gap: 12px; }
   .dates label { flex: 1; display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 14px; }
@@ -176,17 +196,28 @@
 <body>
 <main>
 
+  <!-- Each "How much it matters" slider is the importance (0-10) for that section's fuzzy function -->
+
   <section>
     <div class="head">
       <h2>Energy</h2>
-      <span class="value" id="energyValue">5</span>
+      <span class="value" id="energyValue"></span>
     </div>
+    <!-- 1-5, same scale as the events' energy. Words are Marlene's: drained, tired, okay, good, buzzing -->
     <div class="slider">
       <div class="track"></div>
-      <div class="fill" id="energyFill" style="left:0"></div>
-      <input type="range" id="energy" min="0" max="10" step="1" value="5" aria-label="Energy">
+      <div class="fill" style="left:0"></div>
+      <input type="range" id="energy" min="1" max="5" step="1" value="3" aria-label="Energy">
     </div>
-    <div class="ends"><span>Chill</span><span>Wild</span></div>
+    <div class="ends"><span>Drained</span><span>Buzzing</span></div>
+    <div class="importance">
+      <div class="imp-head"><span>How much it matters</span><span id="energyImpValue"></span></div>
+      <div class="slider">
+        <div class="track"></div>
+        <div class="fill" style="left:0"></div>
+        <input type="range" id="energyImp" min="0" max="10" step="1" value="5" aria-label="How much energy matters">
+      </div>
+    </div>
   </section>
 
   <section>
@@ -194,9 +225,9 @@
       <h2>When</h2>
     </div>
     <div class="times">
-      <label><input type="checkbox" name="time" value="early" checked> Early evening</label>
-      <label><input type="checkbox" name="time" value="mid" checked> Mid evening</label>
-      <label><input type="checkbox" name="time" value="late" checked> Late night</label>
+      <label><input type="checkbox" name="time" value="early evening" checked> Early evening</label>
+      <label><input type="checkbox" name="time" value="evening" checked> Evening</label>
+      <label><input type="checkbox" name="time" value="night" checked> Night</label>
     </div>
     <div class="dates">
       <label>From <input type="date" id="dateFrom"></label>
@@ -215,6 +246,14 @@
       <input type="range" id="priceMin" min="0" max="200" step="5" value="0" aria-label="Minimum price">
       <input type="range" id="priceMax" min="0" max="200" step="5" value="200" aria-label="Maximum price">
     </div>
+    <div class="importance">
+      <div class="imp-head"><span>How much it matters</span><span id="priceImpValue"></span></div>
+      <div class="slider">
+        <div class="track"></div>
+        <div class="fill" style="left:0"></div>
+        <input type="range" id="priceImp" min="0" max="10" step="1" value="5" aria-label="How much price matters">
+      </div>
+    </div>
   </section>
 
   <section>
@@ -231,6 +270,62 @@
       <option value="8">7–9</option>
       <option value="10">10+</option>
     </select>
+    <div class="importance">
+      <div class="imp-head"><span>How much it matters</span><span id="groupImpValue"></span></div>
+      <div class="slider">
+        <div class="track"></div>
+        <div class="fill" style="left:0"></div>
+        <input type="range" id="groupImp" min="0" max="10" step="1" value="5" aria-label="How much group size matters">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Kids</h2>
+    </div>
+    <div class="times">
+      <label><input type="checkbox" id="kids"> Bringing a child</label>
+      <label id="kidAgeLabel" hidden>Age <input type="number" id="kidAge" min="0" max="17" value="8"></label>
+    </div>
+    <div class="importance" id="kidsImportance" hidden>
+      <div class="imp-head"><span>How much it matters</span><span id="kidsImpValue"></span></div>
+      <div class="slider">
+        <div class="track"></div>
+        <div class="fill" style="left:0"></div>
+        <input type="range" id="kidsImp" min="0" max="10" step="1" value="5" aria-label="How much the age rating matters">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Keywords</h2>
+    </div>
+    <!-- Same list as KEYWORDS in Fuzzy/event_data.py -->
+    <div class="times">
+      <label><input type="checkbox" name="keyword" value="party"> Party</label>
+      <label><input type="checkbox" name="keyword" value="dance"> Dance</label>
+      <label><input type="checkbox" name="keyword" value="social"> Social</label>
+      <label><input type="checkbox" name="keyword" value="quiet"> Quiet</label>
+      <label><input type="checkbox" name="keyword" value="creative"> Creative</label>
+      <label><input type="checkbox" name="keyword" value="outdoor"> Outdoor</label>
+      <label><input type="checkbox" name="keyword" value="food"> Food</label>
+      <label><input type="checkbox" name="keyword" value="sport"> Sport</label>
+      <label><input type="checkbox" name="keyword" value="pop"> Pop</label>
+      <label><input type="checkbox" name="keyword" value="techno"> Techno</label>
+      <label><input type="checkbox" name="keyword" value="edm"> EDM</label>
+      <label><input type="checkbox" name="keyword" value="made for kids"> Made for kids</label>
+      <label><input type="checkbox" name="keyword" value="made for pets"> Made for pets</label>
+    </div>
+    <div class="importance">
+      <div class="imp-head"><span>How much it matters</span><span id="keywordImpValue"></span></div>
+      <div class="slider">
+        <div class="track"></div>
+        <div class="fill" style="left:0"></div>
+        <input type="range" id="keywordImp" min="0" max="10" step="1" value="5" aria-label="How much keywords matter">
+      </div>
+    </div>
   </section>
 
   <section>
@@ -276,13 +371,35 @@
   const $ = id => document.getElementById(id);
   const pct = input => (input.value - input.min) / (input.max - input.min) * 100;
 
-  // Energy
-  function updateEnergy() {
-    $("energyFill").style.right = (100 - pct($("energy"))) + "%";
-    $("energyValue").textContent = $("energy").value;
+  // Single sliders: move the blue fill and show the value
+  function setupSlider(input, showValue) {
+    const fill = input.parentElement.querySelector(".fill");
+    function update() {
+      fill.style.right = (100 - pct(input)) + "%";
+      showValue(Number(input.value));
+    }
+    input.addEventListener("input", update);
+    update();
   }
-  $("energy").addEventListener("input", updateEnergy);
-  updateEnergy();
+
+  // Energy 1-5, shown as Marlene's words
+  const ENERGY_WORDS = ["drained", "tired", "okay", "good", "buzzing"];
+  const energyWord = () => ENERGY_WORDS[Number($("energy").value) - 1];
+  setupSlider($("energy"), () => {
+    const w = energyWord();
+    $("energyValue").textContent = w[0].toUpperCase() + w.slice(1);
+  });
+
+  // "How much it matters" sliders, 0-10
+  for (const id of ["energyImp", "priceImp", "groupImp", "kidsImp", "keywordImp"]) {
+    setupSlider($(id), v => { $(id + "Value").textContent = v + "/10"; });
+  }
+
+  // Kids: only show the age and the slider when a child is coming
+  $("kids").addEventListener("change", () => {
+    $("kidAgeLabel").hidden = !$("kids").checked;
+    $("kidsImportance").hidden = !$("kids").checked;
+  });
 
   // Dates: default to today through one week from today
   const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -336,19 +453,26 @@
   });
 
   // 1. UI function: collect every answer on the page. This is the JSON the back end receives.
+  //    money, group, kids_ok and keywords have the same shape as Fiona's user dict.
+  const checked = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(c => c.value);
+
   function getFilters() {
     const fromOption = $("from").selectedOptions[0];
     const [lat, lon] = fromOption.value.split(",").map(Number);
     return {
-      energy: Number($("energy").value),
-      times: [...document.querySelectorAll('input[name="time"]:checked')].map(c => c.value),
+      energy: { level: Number($("energy").value), word: energyWord(), importance: Number($("energyImp").value) },
+      times: checked("time"),                     // 'early evening', 'evening', 'night'
       dateFrom: $("dateFrom").value,
       dateTo: $("dateTo").value,
-      priceMin: Number($("priceMin").value),
-      priceMax: Number($("priceMax").value),
-      group: $("group").value,
+      money: { min: Number($("priceMin").value), max: Number($("priceMax").value), importance: Number($("priceImp").value) },
+      group: { size: Number($("group").value), importance: Number($("groupImp").value) },
+      kids_ok: $("kids").checked
+        ? { age: Number($("kidAge").value), importance: Number($("kidsImp").value) }
+        : null,                                   // null = no kids coming
+      keywords: checked("keyword"),
+      keyword_importance: Number($("keywordImp").value),
       from: { name: fromOption.textContent, lat, lon },
-      modes: [...document.querySelectorAll('input[name="mode"]:checked')].map(c => c.value),
+      modes: checked("mode"),
     };
   }
 

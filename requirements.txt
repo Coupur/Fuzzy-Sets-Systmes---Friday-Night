@@ -1,0 +1,11 @@
+# Install with:  pip install -r requirements.txt
+
+# Needed to run the app (python app.py)
+flask
+numpy
+
+# Only needed for the notebooks in notebooks/
+matplotlib
+pandas
+scikit-fuzzy
+jupyter
