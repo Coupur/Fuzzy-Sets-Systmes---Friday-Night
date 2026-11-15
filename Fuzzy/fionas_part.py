@@ -177,10 +177,25 @@ def generous_or(mu):
     return float(1 - np.prod(1 - np.asarray(mu, float)))
 
 
+<<<<<<< Updated upstream
 # Keywords: Marlene's -1..1 values are added up, so a missing keyword lowers the score
 # but can't make it 0 on its own (only if every keyword is missing and the importance is 10)
 def score_keywords(event, u, trip):
     if not u.get('keywords'):      # no keywords selected -> this criterion is left out
+=======
+# Keywords: generous OR. This is high as soon as one keyword of the event matches the user's needs
+def keyword_degree(event, keyword):
+    """How well the event matches one keyword (0-1).
+
+    The event's keywords are now a list (like checkboxes): 1 if it has the keyword, else 0.
+    TODO Replace this by Marlene's keyword_membership once it's linked.
+    """
+    return 1.0 if keyword in event['keywords'] else 0.0
+
+
+def score_keywords(event, u):
+    if not u.get('keywords'):
+>>>>>>> Stashed changes
         return None
     imp = u.get('keyword_importance', 5)
     if imp <= 0:                   # importance 0 --> left out
